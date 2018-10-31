@@ -142,6 +142,7 @@ if __name__ == '__main__':
             lines = f.readlines()
             lines = filter(lambda l: not l.startswith('#'), lines)
             outname = os.path.splitext(os.path.basename(filename))[0]
-            graph = list(map(lambda l: tuple(l.split()), lines))
+            # dedupe (a, b) & (b, a) pairs
+            graph = list(set(map(lambda l: tuple(sorted(l.split())), lines)))
             process_graph(graph, outname)
 
