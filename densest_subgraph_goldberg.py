@@ -1,5 +1,15 @@
 from graph_tool.all import *
 import itertools
+import functools
+from glob import glob
+import os.path
+import time
+
+
+def get_original_num_vertices_edges(network):
+    n = network.num_vertices() - 2
+    m = int((network.num_edges() - 2*n) / 2)
+    return n, m
 
 
 def undirected_to_flow_network(graph):
@@ -54,8 +64,7 @@ def update_sink_edge_weights(network, s, t, m, g):
 
 
 def densest_subgraph(network, s, t):
-    n = network.num_vertices() - 2
-    m = (network.num_edges() - 2*n) / 2
+    n, m = get_original_num_vertices_edges(network)
     l = 0
     u = m
     V = None
@@ -76,22 +85,63 @@ def densest_subgraph(network, s, t):
     return V
 
 
-if __name__ == '__main__':
-    # 1, 2, 3, 4 fully connected, 5 only connected to 1
-    graph = [
-            ('5', '1'),
-            ('1', '2'), ('1', '3'), ('1', '4'),
-            ('2', '3'), ('2', '4'),
-            ('3', '4')]
+# timing function taken from https://stackoverflow.com/a/20924212/429288
+def timeit(func):
+    @functools.wraps(func)
+    def newfunc(*args, **kwargs):
+        startTime = time.time()
+        func(*args, **kwargs)
+        elapsedTime = time.time() - startTime
+        print('function [{}] finished in {} ms'.format(
+            func.__name__, int(elapsedTime * 1000)))
+    return newfunc
+
+
+@timeit
+def process_graph(graph, output_name):
     network, s, t = undirected_to_flow_network(graph)
+
+    n, m = get_original_num_vertices_edges(network)
+    print(f'original: # of nodes: {n}, # of edges: {m}, density: {round(m/n, 4)}')
+
     subgraph_view = densest_subgraph(network, s, t)
+
+    # construct the subgraph induced by the returned vertices
     lab = subgraph_view.vertex_properties['labels']
-    sub_vertices = set([lab[v] for v in lab])
+    sub_vertices = set([lab[v] for v in subgraph_view.vertices()])
     subgraph_edges = []
     for e in graph:
         if e[0] in sub_vertices and e[1] in sub_vertices:
             subgraph_edges.append(e)
     subgraph = Graph(directed=False)
     vertex_labels = subgraph.add_edge_list(subgraph_edges, hashed=True)
+
+    subn = subgraph.num_vertices()
+    subm = subgraph.num_edges()
+    print(f'subgraph: # of nodes: {subn}, # of edges: {subm}, density: {round(subm/subn, 4)}')
+
+    # export subgraph & plot it
+    subgraph.save(os.path.join('data', f"{output_name}_densest_subgraph.xml"))
     graph_draw(subgraph, vertex_text=vertex_labels,
-               output="densest_subgraph.png")
+               output=os.path.join('data', f"{output_name}.png"))
+
+
+if __name__ == '__main__':
+    # 1, 2, 3, 4 fully connected, 5 only connected to 1
+    # graph = [
+    #         ('5', '1'),
+    #         ('1', '2'), ('1', '3'), ('1', '4'),
+    #         ('2', '3'), ('2', '4'),
+    #         ('3', '4')]
+    # process_graph(graph, 'simple')
+
+    inputs = glob(os.path.join("data", "*.txt"))
+    for filename in inputs:
+        with open(filename) as f:
+            print(f'Processing {filename}')
+            lines = f.readlines()
+            lines = filter(lambda l: not l.startswith('#'), lines)
+            outname = os.path.splitext(os.path.basename(filename))[0]
+            graph = list(map(lambda l: tuple(l.split()), lines))
+            process_graph(graph, outname)
+
