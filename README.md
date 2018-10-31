@@ -11,3 +11,7 @@ brew install graph-tool
 # virtualenv needs to be created with --system-site-packages to access graph-tool
 mkvirtualenv --python=`which python3` --system-site-packages cs5234
 ```
+
+## Acknowledgement
+
+Data source: https://snap.stanford.edu/data/
