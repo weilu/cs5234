@@ -1,2 +1,3 @@
 data/*.png
 data/*.xml
+giraph/DensestSubgraphApprox/target/*
