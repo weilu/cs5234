@@ -135,14 +135,12 @@ if __name__ == '__main__':
     #         ('3', '4')]
     # process_graph(graph, 'simple')
 
-    inputs = glob(os.path.join("data", "*.txt"))
+    inputs = glob(os.path.join("data", "*_preprocessed.txt"))
     for filename in inputs:
         with open(filename) as f:
             print(f'Processing {filename}')
             lines = f.readlines()
-            lines = filter(lambda l: not l.startswith('#'), lines)
+            graph = list(map(lambda l: tuple(l.split()), lines))
             outname = os.path.splitext(os.path.basename(filename))[0]
-            # dedupe (a, b) & (b, a) pairs
-            graph = list(set(map(lambda l: tuple(sorted(l.split())), lines)))
             process_graph(graph, outname)
 
