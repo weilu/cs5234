@@ -2,6 +2,7 @@ package weilu;
 
 import org.apache.giraph.aggregators.DoubleMaxAggregator;
 import org.apache.giraph.aggregators.IntSumAggregator;
+import org.apache.giraph.conf.FloatConfOption;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -11,7 +12,9 @@ public class DensityMasterCompute extends DefaultMasterCompute {
   public static final String MAX_DENSITY = "MaxDensityAggregator";
   public static final String NUM_VERTEXES_TO_BE_REMOVED = "VertexesToRemoveAggregator";
 
-  public static final double epsilon = 0.001; // TODO: make me config
+  public static final FloatConfOption EPSILON =
+      new FloatConfOption("DensityMasterCompute.epsilon", 0.001f,
+          "Approximation parameter epsilon");
 
   @Override
   public void compute() {
@@ -21,7 +24,7 @@ public class DensityMasterCompute extends DefaultMasterCompute {
 
     // undirected graph, therefore divide by 2
     double currDensity = 0.5 * getTotalNumEdges() / getTotalNumVertices();
-    double threshold = 2 * (1 + epsilon) * currDensity;
+    double threshold = 2 * (1 + EPSILON.get(getConf())) * currDensity;
     setAggregatedValue(DEGREE_THRESHOLD, new DoubleWritable(threshold));
 
     double maxDensity = ((DoubleWritable) getAggregatedValue(MAX_DENSITY)).get();
