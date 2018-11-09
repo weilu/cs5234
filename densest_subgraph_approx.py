@@ -4,11 +4,12 @@ import functools
 from glob import glob
 import os.path
 import time
+from densest_subgraph_goldberg import timeit
 
-EPSILON = 0.001
+EPSILONS = [0.001, 0.1, 1]
 
-
-def process_graph(edges):
+@timeit
+def process_graph(edges, epsilon):
     g = Graph(directed=False)
     vertex_labels = g.add_edge_list(edges, hashed=True)
     g.vertex_properties['labels'] = vertex_labels
@@ -16,9 +17,9 @@ def process_graph(edges):
     density = g.num_edges() / g.num_vertices()
     max_density = density
 
-    print(f'threshold: undefined, edges: {g.num_edges()}, vertexes: {g.num_vertices()}, max_density: {max_density}')
+    # print(f'threshold: undefined, edges: {g.num_edges()}, vertexes: {g.num_vertices()}, max_density: {max_density}')
     while g.num_vertices() != 0:
-        threshold = 2 * (1 + EPSILON) * density
+        threshold = 2 * (1 + epsilon) * density
         to_remove = set()
         for v in g.vertices():
             if v.is_valid() and v.out_degree() <= threshold:
@@ -30,15 +31,17 @@ def process_graph(edges):
         density = g.num_edges() / g.num_vertices()
         if density > max_density:
             max_density = density
-        print(f'threshold: {threshold}, edges: {g.num_edges()}, vertexes: {g.num_vertices()}, max_density: {max_density}')
+        # print(f'threshold: {threshold}, edges: {g.num_edges()}, vertexes: {g.num_vertices()}, max_density: {max_density}')
+    print(f'epsilon: {epsilon}, max_density: {max_density}')
 
 
 if __name__ == '__main__':
-    inputs = glob(os.path.join("data", "ca-GrQc_preprocessed.txt"))
+    inputs = glob(os.path.join("data", "*_preprocessed.txt"))
     for filename in inputs:
         with open(filename) as f:
-            print(f'Processing {filename}')
+            print(f'\nProcessing {filename}')
             lines = f.readlines()
             edges = list(map(lambda l: tuple(l.split()), lines))
-            process_graph(edges)
+            for epsilon in EPSILONS:
+                process_graph(edges, epsilon)
 
