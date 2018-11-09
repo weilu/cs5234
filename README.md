@@ -61,7 +61,10 @@ export LIBJARS=/usr/local/giraph/giraph-core/target/giraph-1.3.0-SNAPSHOT-for-ha
 hadoop jar /usr/local/giraph/giraph-core/target/giraph-1.3.0-SNAPSHOT-for-hadoop-2.8.2-jar-with-dependencies.jar \
   org.apache.giraph.GiraphRunner -libjars ${LIBJARS} weilu.App \
   -mc weilu.DensityMasterCompute -aw org.apache.giraph.aggregators.TextAggregatorWriter \
-  -ca giraph.textAggregatorWriter.frequency=1 -eif org.apache.giraph.io.formats.IntNullReverseTextEdgeInputFormat \
+  -ca giraph.textAggregatorWriter.frequency=1 \
+  -ca giraph.vertex.resolver.create.on.msgs=false \
+  -ca giraph.logLevel=trace \
+  -eif org.apache.giraph.io.formats.IntNullReverseTextEdgeInputFormat \
   -eip /user/giraph/input/ca-GrQc_preprocessed.txt -w 1
 
 # see results
