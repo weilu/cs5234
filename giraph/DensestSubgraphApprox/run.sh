@@ -9,9 +9,9 @@ export LIBJARS=/usr/local/giraph/giraph-core/target/giraph-1.3.0-SNAPSHOT-for-ha
 
 # Upload data files to hdfs
 # $HADOOP_HOME/bin/hadoop dfs -mkdir -p /user/luwei/input/
-# $HADOOP_HOME/bin/hadoop dfs -put -f ../data/*_preprocessed.txt /user/luwei/input/
+# $HADOOP_HOME/bin/hadoop dfs -put -f ../../data/*_preprocessed.txt /user/luwei/input/
 
-for file in ../data/*_preprocessed.txt
+for file in ../../data/*_preprocessed.txt
 do
   filename=${file##*/}
   for epsilon in 0.001 0.1 1
@@ -24,7 +24,6 @@ do
       -ca giraph.textAggregatorWriter.filename=out-$filename-$epsilon \
       -ca giraph.vertex.resolver.create.on.msgs=false \
       -ca DensityMasterCompute.epsilon=$epsilon \
-      -ca giraph.logLevel=trace \
       -eif org.apache.giraph.io.formats.IntNullReverseTextEdgeInputFormat \
       -eip /user/luwei/input/$filename \
       -w 1;
