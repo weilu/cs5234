@@ -20,20 +20,23 @@ public class App extends BasicComputation<IntWritable, IntWritable, NullWritable
       Vertex<IntWritable, IntWritable, NullWritable> vertex,
       Iterable<IntWritable> messages) throws IOException {
 
-    double threshold = ((DoubleWritable) getAggregatedValue(DensityMasterCompute.DEGREE_THRESHOLD)).get();
+    // only send remove vertex request when no pending vertexes & edges removals & MC sees the correct state of world
+    if (getSuperstep() % 3 == 1) {
+      double threshold = ((DoubleWritable) getAggregatedValue(DensityMasterCompute.DEGREE_THRESHOLD)).get();
 
-    if (vertex.getNumEdges() <= threshold) {
-      // remove self (actually happens at the beginning of next superstep)
-      removeVertexRequest(vertex.getId());
+      if (vertex.getNumEdges() <= threshold) {
+        // remove self (actually happens at the beginning of next superstep)
+        removeVertexRequest(vertex.getId());
 
-      // according to the Pregel paper, "removing a vertex implicitly removes all of its out-edges"
-      // send messages to neighbor to remove in-edges, make sure giraph.vertex.resolver.create.on.msgs=false
-      sendMessageToAllEdges(vertex, vertex.getId());
+        // according to the Pregel paper, "removing a vertex implicitly removes all of its out-edges"
+        // send messages to neighbor to remove in-edges, make sure giraph.vertex.resolver.create.on.msgs=false
+        sendMessageToAllEdges(vertex, vertex.getId());
 
-      LOG.info("vertex " + vertex.getId() +
-          " is to be removed because its degree " + vertex.getNumEdges() +
-          " is less than " + threshold);
-      aggregate(DensityMasterCompute.NUM_VERTEXES_TO_BE_REMOVED, new IntWritable(1));
+        LOG.info("vertex " + vertex.getId() +
+            " is to be removed because its degree " + vertex.getNumEdges() +
+            " is less than " + threshold);
+        aggregate(DensityMasterCompute.NUM_VERTEXES_TO_BE_REMOVED, new IntWritable(1));
+      }
     }
 
     for (IntWritable message : messages) {
