@@ -11,7 +11,7 @@ THRESHOLD_OUT_DIR=$TEMP_OUT_PREFIX/threshold
 VERTEX_REMOVED_OUT_DIR=$TEMP_OUT_PREFIX/vertex_removed
 EDGE_REMOVED_OUT_DIR=$TEMP_OUT_PREFIX/edge_removed
 INPUT_DIR=/data
-INPUT_FILE=ca-HepTh_preprocessed.txt
+INPUT_FILE=ca-GrQc_preprocessed.txt
 OUTPUT_DIR=/out
 
 $HADOOP dfs -rm -r -f $INPUT_DIR $OUTPUT_DIR $TEMP_OUT_PREFIX
@@ -44,9 +44,11 @@ do
   # sort by both fields
   $HADOOP jar $STREAMING_JAR \
     -D stream.num.map.output.key.fields=2 \
+    -D num.key.fields.for.partition=1 \
     -files removal_mapper.py,removal_reducer.py \
     -mapper "removal_mapper.py $THRESHOLD" \
     -reducer removal_reducer.py \
+    -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
     -input $DEGREE_OUT_DIR \
     -output $VERTEX_REMOVED_OUT_DIR
 
@@ -55,9 +57,11 @@ do
   # sort by all 3 fields
   $HADOOP jar $STREAMING_JAR \
     -D stream.num.map.output.key.fields=3 \
+    -D num.key.fields.for.partition=1 \
     -files edge_removal_reducer.py \
     -mapper cat \
     -reducer edge_removal_reducer.py \
+    -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
     -input $VERTEX_REMOVED_OUT_DIR \
     -output $OUTPUT_DIR
 

@@ -1,28 +1,29 @@
 #!/usr/bin/env bash
 set -xe
 
+EMR_CLUSTER_ID=j-1RXFH6ZCHBH5L
 aws s3 rm --recursive s3://cs5234/temp_out
 
 check_status () {
-  STATE=`aws emr list-steps --cluster-id j-12AR2CF2HER3B | jq .Steps[0].Status.State` 
+  STATE=`aws emr list-steps --cluster-id $EMR_CLUSTER_ID | jq .Steps[0].Status.State`
   STATE=`echo $STATE | tr -d \"` # remove ""
   while [[ "$STATE" = "RUNNING" || "$STATE" = "PENDING" ]]
   do
     sleep 20
-    STATE=`aws emr list-steps --cluster-id j-12AR2CF2HER3B | jq .Steps[0].Status.State`
+    STATE=`aws emr list-steps --cluster-id $EMR_CLUSTER_ID | jq .Steps[0].Status.State`
     STATE=`echo $STATE | tr -d \"`
   done
 
   if [ "$STATE" = "FAILED" ]
   then
-    LOGFILES=$(aws emr list-steps --cluster-id j-12AR2CF2HER3B | jq .Steps[0].Status.FailureDetails.LogFile | tr -d \")
+    LOGFILES=$(aws emr list-steps --cluster-id $EMR_CLUSTER_ID | jq .Steps[0].Status.FailureDetails.LogFile | tr -d \")
     aws s3 sync $LOGFILES log/
     exit 1
   fi
 }
 
 run_step () {
-  aws emr add-steps --cluster-id j-12AR2CF2HER3B --steps file://./emr/$1.json
+  aws emr add-steps --cluster-id $EMR_CLUSTER_ID --steps file://./emr/$1.json
   check_status
 }
 
