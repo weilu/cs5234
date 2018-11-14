@@ -1,0 +1,22 @@
+[
+  {
+     "Name": "EdgeRemoval",
+     "Type": "STREAMING",
+     "ActionOnFailure": "CONTINUE",
+     "Args": [
+         "-D",
+         "stream.num.map.output.key.fields=3",
+         "-files",
+         "s3://cs5234/streaming-scripts/edge_removal_reducer.py",
+         "-mapper",
+         "cat",
+         "-reducer",
+         "edge_removal_reducer.py",
+         "-input",
+         "s3://cs5234/temp_out/vertex_removed",
+         "-output",
+         "s3://cs5234/out"
+     ]
+  }
+]
+

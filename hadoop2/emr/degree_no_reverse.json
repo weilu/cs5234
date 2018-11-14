@@ -1,0 +1,18 @@
+[
+  {
+     "Name": "DegreeNoReverse",
+     "Type": "STREAMING",
+     "ActionOnFailure": "CONTINUE",
+     "Args": [
+         "-files",
+         "s3://cs5234/streaming-scripts/degree_reducer.py",
+         "-mapper",
+         "cat",
+         "-reducer",
+         "degree_reducer.py",
+         "-input",
+         "s3://cs5234/out",
+         "-output",
+         "s3://cs5234/temp_out/degree"]
+  }
+]

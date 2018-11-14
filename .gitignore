@@ -1,3 +1,4 @@
 data/*.png
 data/*.xml
 giraph/DensestSubgraphApprox/target/*
+hadoop2/emr/vertex_removal.json

@@ -1,0 +1,22 @@
+[
+  {
+     "Name": "VertexRemoval",
+     "Type": "STREAMING",
+     "ActionOnFailure": "CONTINUE",
+     "Args": [
+         "-D",
+         "stream.num.map.output.key.fields=2",
+         "-files",
+         "s3://cs5234/streaming-scripts/removal_mapper.py,s3://cs5234/streaming-scripts/removal_reducer.py",
+         "-mapper",
+         "removal_mapper.py THRESHOLD",
+         "-reducer",
+         "removal_reducer.py",
+         "-input",
+         "s3://cs5234/temp_out/degree",
+         "-output",
+         "s3://cs5234/temp_out/vertex_removed"
+     ]
+  }
+]
+

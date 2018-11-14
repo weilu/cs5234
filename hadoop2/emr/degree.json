@@ -1,0 +1,18 @@
+[
+  {
+     "Name": "Degree",
+     "Type": "STREAMING",
+     "ActionOnFailure": "CONTINUE",
+     "Args": [
+         "-files",
+         "s3://cs5234/streaming-scripts/degree_mapper.py,s3://cs5234/streaming-scripts/degree_reducer.py",
+         "-mapper",
+         "degree_mapper.py",
+         "-reducer",
+         "degree_reducer.py",
+         "-input",
+         "s3://cs5234/data/ca-GrQc_preprocessed.txt",
+         "-output",
+         "s3://cs5234/temp_out/degree"]
+  }
+]
