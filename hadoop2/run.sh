@@ -83,11 +83,11 @@ do
   read M N THRESHOLD DENSITY <<< $($HADOOP dfs -cat $THRESHOLD_OUT_DIR/part-00000)
   echo "edges: $M, nodes: $N, threshold: $THRESHOLD, density: $DENSITY"
 
-  if [[ ! -z "$DENSITY" && "$DENSITY" -gt "$MAX_DENSITY" ]]
+  if [[ ! -z "$DENSITY" && $(echo "$DENSITY>$MAX_DENSITY" | bc ) -eq 1 ]]
   then
     MAX_DENSITY=$DENSITY
-    echo $MAX_DENSITY
+    echo "updating MAX_DENSITY = $MAX_DENSITY"
   fi
 done
 
-echo $MAX_DENSITY
+echo "$INPUT_FILE densest subgraph density: $MAX_DENSITY"
