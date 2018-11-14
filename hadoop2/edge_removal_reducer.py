@@ -2,8 +2,10 @@
 import sys
 from itertools import groupby
 from operator import itemgetter
-from util import read_mapper_output
 
+def read_mapper_output(file, separator='\t'):
+    for line in file:
+        yield line.rstrip().split(separator)
 
 for line in sys.stdin:
     data = read_mapper_output(sys.stdin)

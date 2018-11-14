@@ -3,8 +3,10 @@ import os
 import sys
 from itertools import groupby
 from operator import itemgetter
-from util import read_mapper_output
 
+def read_mapper_output(file, separator='\t'):
+    for line in file:
+        yield line.rstrip().split(separator)
 
 # needs to run in a single reducer
 epsilon = int(sys.argv[1])
@@ -16,7 +18,7 @@ for line in sys.stdin:
         if label == 'n':
             n = sum(1 for label, v in group)
         elif label == '2m':
-            m2 = sum(int(v) for label, v in group)
+            m2 = float(sum(int(v) for label, v in group))
             m =  m2 / 2
 
 # only works on a single reducer: m, n values are both available
