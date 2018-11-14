@@ -8,18 +8,21 @@ HADOOP=$HADOOP_PREFIX/bin/hadoop
 TEMP_OUT_PREFIX=temp_out
 DEGREE_OUT_DIR=$TEMP_OUT_PREFIX/degree
 THRESHOLD_OUT_DIR=$TEMP_OUT_PREFIX/threshold
+VERTEX_REMOVED_OUT_DIR=$TEMP_OUT_PREFIX/vertex_removed
+EDGE_REMOVED_OUT_DIR=$TEMP_OUT_PREFIX/edge_removed
 INPUT_DIR=/data
+INPUT_FILE=ca-HepTh_preprocessed.txt
 OUTPUT_DIR=/out
 
 $HADOOP dfs -rm -r -f $INPUT_DIR $OUTPUT_DIR $TEMP_OUT_PREFIX
 $HADOOP dfs -mkdir -p $INPUT_DIR
-$HADOOP dfs -put ..$INPUT_DIR/ca-GrQc_preprocessed.txt $INPUT_DIR/
+$HADOOP dfs -put ..$INPUT_DIR/$INPUT_FILE $INPUT_DIR/
 
 $HADOOP jar $STREAMING_JAR \
   -files degree_mapper.py,degree_reducer.py \
   -mapper degree_mapper.py \
   -reducer degree_reducer.py \
-  -input $INPUT_DIR/ca-GrQc_preprocessed.txt \
+  -input $INPUT_DIR/$INPUT_FILE \
   -output $DEGREE_OUT_DIR
 # $HADOOP dfs -cat $DEGREE_OUT_DIR/part-00000
 
@@ -30,5 +33,61 @@ $HADOOP jar $STREAMING_JAR \
   -input $DEGREE_OUT_DIR \
   -output $THRESHOLD_OUT_DIR \
   -numReduceTasks 1
-$HADOOP dfs -cat $THRESHOLD_OUT_DIR/part-00000
 
+# {m n threshold density}
+read M N THRESHOLD DENSITY <<< $($HADOOP dfs -cat $THRESHOLD_OUT_DIR/part-00000)
+echo "edges: $M, nodes: $N, threshold: $THRESHOLD, density: $DENSITY"
+MAX_DENSITY=$DENSITY
+
+while [[ ! -z "$N" && $N -gt 0 ]]
+do
+  # sort by both fields
+  $HADOOP jar $STREAMING_JAR \
+    -D stream.num.map.output.key.fields=2 \
+    -files removal_mapper.py,removal_reducer.py \
+    -mapper "removal_mapper.py $THRESHOLD" \
+    -reducer removal_reducer.py \
+    -input $DEGREE_OUT_DIR \
+    -output $VERTEX_REMOVED_OUT_DIR
+
+  $HADOOP dfs -rm -r -f $OUTPUT_DIR
+
+  # sort by all 3 fields
+  $HADOOP jar $STREAMING_JAR \
+    -D stream.num.map.output.key.fields=3 \
+    -files edge_removal_reducer.py \
+    -mapper cat \
+    -reducer edge_removal_reducer.py \
+    -input $VERTEX_REMOVED_OUT_DIR \
+    -output $OUTPUT_DIR
+
+  $HADOOP dfs -rm -r -f $TEMP_OUT_PREFIX
+
+  # no need to use degree mapper as the edges have already been doubled
+  $HADOOP jar $STREAMING_JAR \
+    -files degree_reducer.py \
+    -mapper cat \
+    -reducer degree_reducer.py \
+    -input $OUTPUT_DIR \
+    -output $DEGREE_OUT_DIR
+  # $HADOOP dfs -cat $DEGREE_OUT_DIR/part-00000
+
+  $HADOOP jar $STREAMING_JAR \
+    -files threshold_mapper.py,threshold_reducer.py \
+    -mapper threshold_mapper.py \
+    -reducer 'threshold_reducer.py 1' \
+    -input $DEGREE_OUT_DIR \
+    -output $THRESHOLD_OUT_DIR \
+    -numReduceTasks 1
+
+  read M N THRESHOLD DENSITY <<< $($HADOOP dfs -cat $THRESHOLD_OUT_DIR/part-00000)
+  echo "edges: $M, nodes: $N, threshold: $THRESHOLD, density: $DENSITY"
+
+  if [[ ! -z "$DENSITY" && "$DENSITY" -gt "$MAX_DENSITY" ]]
+  then
+    MAX_DENSITY=$DENSITY
+    echo $MAX_DENSITY
+  fi
+done
+
+echo $MAX_DENSITY
