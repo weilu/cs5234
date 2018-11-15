@@ -1,6 +1,5 @@
 import sys
 
+# Mapping "Good" Edges only
 for line in sys.stdin:
-	if line.startswith('#'):
-		continue
 	print(line.strip())

@@ -12,18 +12,21 @@ def main():
 	data = read_from_mapper(sys.stdin)
 	groups = groupby(data, itemgetter(0)) # 0 for u/sourceNode and 1 for v/destNode
 	for u, group in groups:
-		n+=1
 		try:
-			degree = sum(1 for u, v in group)
+			n+=1
+			degree=0
+			for u, v in group:
+				print('{}\t{}'.format(u, v))
+				degree+=1
 			m+=degree
-			print (u, degree)
+			print('{}\t{}\t{}'.format('d', u, degree))
 		except ValueError:
 			pass
  
-	file = open('cache.temp','w') 
+	file = open('cache.temp','a') 
 	 
 	file.write('n\t'+str(n)+'\n') 
-	file.write('m\t'+str(int(m/2))+'\n')   
+	file.write('m\t'+str(m)+'\n')   
 	 
 	file.close()
 

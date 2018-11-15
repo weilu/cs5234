@@ -1,24 +1,26 @@
-import os, sys
+import os, sys, time
 
-def read_from_cache():
+def readFromCache():
 	# Reading graph info (n, m) from cache file
-	cache = open('cache.temp','r')
-	n = m = 0
-	for line in cache:
-		tokens = line.strip().split('\t')
-		try:
-			if (tokens[0] == 'n'):
-				n = int(tokens[1])
-			elif (tokens[0] == 'm'):
-				m = int(tokens[1])
-		except ValueError:
-			pass
+	with open('cache.temp','r') as cache_temp:
+		n = m = 0
+		for line in cache_temp:
+			tokens = line.strip().split('\t')
+			try:
+				if (tokens[0] == 'n'):
+					n += int(tokens[1])
+				elif (tokens[0] == 'm'):
+					m += int(tokens[1])
+			except ValueError:
+				pass
 
 	return (n,m)
 
 def main(argv):
 	filepath = argv[1]
-	epsilon = argv[2]
+	epsilon = float(argv[2])
+
+	timestamp = time.strftime("_%Y%b%d_%H%M%S")
 
 	# extract filename from file path
 	# extension should not matter (i.e. .txt)
@@ -34,16 +36,21 @@ def main(argv):
 	opt_n = opt_m = 0
 	opt_density = 0
 
-	os.system('hdfs dfs -rm -r /user/hduser/'+filename+'.temp/ > local.log')
-	os.system('hdfs dfs -mkdir /user/hduser/'+filename+'.temp/ > local.log')
-	os.system('hdfs dfs -put -f'+' '+filepath+' '\
-				+'/user/hduser/'+filename+'.temp/graph.temp > local.log')
+	os.system('hdfs dfs -mkdir /user/hduser/'+filename+timestamp+' > local.log')
+	os.system('hdfs dfs -mkdir /user/hduser/'+filename+timestamp+'/temp/ > local.log')
+	os.system('hdfs dfs -put -f'+' '+filepath+' '+'/user/hduser/'+filename+timestamp+'/graph.in > local.log')
+	os.system('./degree_hadoop.sh'+' '+filename+timestamp+'>local.log')
 
 	while(True):
-		os.system('./hadoop_densest_subgraph.sh'+' '\
-				+filename+' '+str(epsilon)+' > local.log')
-		(n,m) = read_from_cache()
+		(n,m) = readFromCache()
+		t = (1+epsilon)*m/n
+		print(n, m, t)
+		
+		os.system('./remove_edge_hadoop.sh'+' '+filename+timestamp+' '+str(t)+'>local.log')
+		
+		(n,m) = readFromCache()
 		print(n, m)
+
 		if (n==0):
 			break
 
@@ -52,11 +59,11 @@ def main(argv):
 			opt_n = n
 			opt_m = m
 			opt_density = new_density
-			os.system('hdfs dfs -cp -f /user/hduser/'+filename+'.temp/graph.temp'\
-				+' '+'/user/hduser/'+filename+'.temp/graph.clone > local.log')
+			os.system('hdfs dfs -cp -f /user/hduser/'+filename+timestamp+'/temp/graph.temp/'\
+				+' '+'/user/hduser/'+filename+timestamp+'/temp/graph.clone/ > local.log')
 	
-	os.system('hdfs dfs -cp -f /user/hduser/'+filename+'.temp/graph.clone'+' '\
-		+'/user/hduser/'+filename+'.out > local.log')
+	os.system('hdfs dfs -cp -f /user/hduser/'+filename+timestamp+'.temp/graph.clone/'+' '\
+		+'/user/hduser/'+filename+timestamp+'.out/ > local.log')
 
 	print()
 	print('Results:')
