@@ -236,6 +236,16 @@ function [process_graph] finished in 369477 ms
 This exercise also help us better understand Goldberg's exact algorithm, which gave us the idea of formulating the distributed version of the algorithm described above.
 
 \subsection{Hadoop Implementation \& Improvement}
+For our implementation in Hadoop, we have adapted Hadoop Streaming along with our mappers/reducers implemented in Python. Hadoop Streaming is a Hadoop utility that enables creating and running MapReduce jobs with any executable or script as mappers/reducers, and streaming the input through stdin. As our graph data all comes in as a file of edge list, this allows us to process the data in a distributed streaming fashion, and also to implement our mappers/ reducers with great flexbility.  
+
+In order to process the graph data in a distributed fashion, the graph itself has to be stored on HDFS (Hadoop Distributed File System), which enables distrubted file storage. After the   input graph has been stored on HFDS, as each time we perform a MapReduce computation, the file will be merged and streamed into our mapper as stdin. 
+
+There are two main essential MapReduce stages: degree counting, and node removal. To count the degrees for each node of input graph, the mapper will map each undirected edge $(u,v)$ in the graph into two key-value pairs: $\{u;v\}, \{v;u\}$; the reducer will then simply count the number of values for each key that represents the node id for each node, thus the degrees for each particular. 
+
+To perform node removal, we would need to every edges in the graph that are associated to the nodes with degree below threshold during each iteration, and it would require two MapReduce phases to perform so. For each undirected edge $(u,v)$ in the graph, the mapper will first use $u$ as the mapping key, and it maps a special key-value pair $\{u;\$\}$ when the mapper reads a node degree below the threshold; when the reducer later receives key-values that contains the special character \$, it will choose to omit all the values associated to that key; similarly, the mapper will then use $v$ as the mapping key, and perform the same action; thus all the associated edges can be removed, and the node removal can be done within two MapReduce phases. 
+
+Our attempted improvement is that, for each iteration instead of running all these two stages as three different MapReduce phases, we have managed to combine the degree counting into the second phase of node removal, which significantly eliminates the overhead of running an extra MapReduce phase. 
+
 \subsection{Giraph Adaptation}
 
 \section{Conclusion}
