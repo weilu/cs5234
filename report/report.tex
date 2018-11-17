@@ -144,6 +144,48 @@ We can see that for every round of the algorithm, it reduces the graph size by a
 Therefore the algorithm terminates in $O(log_{(1+\varepsilon)}n)$ rounds. At each round, we check every node, which needs to count all its neighboring edges to get its degree, so the work per round is $O(m+n)$. Since degree is a node local property, the algorithm can therefore be distributed at every round.
 
 \subsection{Distributed Exact Algorithms}
+As a thought exercise, we explored possible formulations of a distributed exact algorithm for the densest subgraph problem. Our idea is to build the algorithm on top of Goldberg's min-cut based algorithm – we couldn't get around the outer loop which repeats $O(logn)$ times, so we looked into ways to distribute the min-cut finding algorithm, similar to how Bahmani's algorithm distributed the work within each round.
+
+We came across a distributed min-cut algorithm by Nanongkai \& Su (REFERENCE). They proposed a $1 \pm \varepsilon$ approximation algorithm based on finding a greedy tree packing: $(1 - \varepsilon) \rho^* \leq \rho \leq (1 + \varepsilon) \rho^*$. To obtain the exact min-cut, they proposed to first obtain a 3-approximation value $\rho'$ for the min-cut using another distributed algorithm by Ghaffari \& Kuhn (REFERENCE), which guarantees that $\rho \leq \rho' \leq 3\rho^*$; then they set their error term $\varepsilon = 1/(\rho'+1)$ to obtain an exact solution:
+
+\begin{equation}
+  \begin{split}
+      (1 - \varepsilon) \rho^* & \leq \rho \leq (1 + \varepsilon) \rho^* \\
+      (1 - \frac{1}{\rho' + 1}) \rho^* & \leq \rho \leq (1 + \frac{1}{\rho' + 1}) \rho^* \\
+      (1 - \frac{1}{\rho^* + 1}) \rho^* & \leq \rho \leq (1 + \frac{1}{\rho^* + 1}) \rho^* \\
+      \rho^* - 1 & < \rho < \rho^* + 1 \\
+      \rho & = \rho^*
+  \end{split}
+\end{equation}
+
+The same paper claims that the algorithm runs in $O(\rho^{*4} log^2n (D + \sqrt{n} log^*n))$ rounds, where $D$ is the diameter of the graph. For detailed proof on the running time, please refer to the original paper.
+
+Recall that for the converted network flow used in Goldberg's exact algorithm, $\rho^* = O(mn)$, therefore making the above time complexity $O(m^4 n^4 log^2n (D + \sqrt{n} log^*n))$ which is much worse than the time complexity for the sequential version of the original algorithm's $O(n^3logn)$, so it's impractical in our use case. Regardless, we still want to highlight the merit of Nanongkai's approach of using two approximation algorithms to arrive at an exact solution by setting appropriate value for the error term.
+
+Next, we turned into the classic push-relabel algorithm by Goldberg \& Tarjan (REFERENCE). Turned out, this algorithm can be implemented in a distributed setting by breaking the push step into two substeps and perform the label update in between these two substeps. The pseudocode of the algorithm is presented as below. Note that a vertex v is active if it's label $0 < d(v) < n$ and it has excess flow: $e(v) > 0$.
+
+\begin{lstlisting}[mathescape=true]
+  For all active nodes v do
+    <Push substep 1>
+      push flow from v until flow excess $e(v) = 0$
+        or there's no more residual capacity between v and
+        any of its neighbor w: $d(w)=d(v)-1, r(v, w) = 0$
+      reduce e(v) without increasing e(w)
+    <Label update>
+      if $e(v) > 0$
+        $d'(v) = min(d(w) +1 | \forall w, r(v, w) > 0)$
+        if $d(v) \neq d'(v)$
+          $d(v) = d'(v)$
+          send message $d(v)$ to all v's neighbors
+    <Push substep 2>
+      if there's any flow pushed to v in push substep 1
+        increase e(v)
+  end
+\end{lstlisting}
+
+The above procedure is repeated until there's no more active node. Since the described procedure only concerns node local properties and sending messages to the node's neighbors, it can be performed in parallel among all the active nodes.
+
+The original paper stated and proved that the above procedure can be completed in $O(n^2)$ rounds, which makes our distributed exact algorithm for the densest subgraph problem run in $O(n^2logn)$ time. This is an improvement from the $O(n^3logn)$ time complexity of the original Goldberg min-cut based algorithm, however it's still $n^2$ factor slower than the $2+2\varepsilon$ approximation algorithm. This makes a good thought exercise, but this distributed exact algorithm is infeasible for large graphs with millions and billions of nodes.
 
 \section{Implementations and experiments}
 \subsection{Hadoop Implementation \& Improvement}
