@@ -188,6 +188,53 @@ The above procedure is repeated until there's no more active node. Since the des
 The original paper stated and proved that the above procedure can be completed in $O(n^2)$ rounds, which makes our distributed exact algorithm for the densest subgraph problem run in $O(n^2logn)$ time. This is an improvement from the $O(n^3logn)$ time complexity of the original Goldberg min-cut based algorithm, however it's still $n^2$ factor slower than the $2+2\varepsilon$ approximation algorithm. This makes a good thought exercise, but this distributed exact algorithm is infeasible for large graphs with millions and billions of nodes.
 
 \section{Implementations and experiments}
+Among the algorithms described above, we've implemented Goldberg's min-cut based exact algorithmin python, and Bahmani's $(2+2\varepsilon)$ approximation algorithm in python, Hadoop and Giraph. In the following section, we will describe our implementations including the challenges we've faced and resolved and lessons learned.
+
+\subsection{Baseline Implementation}
+First, in order to provide the ground truth for any experiment datasets we may want to play with, we implemented Goldberg's exact algorithm. We chose to use the library graph-tool (REFERENCE) for this implementation for the following reasons:
+
+\begin{enumerate}
+  \item It provides an intuitive and effective python interface for handling graphs.
+  \item Internally, its data structures and algorithms are implemented in C++, which makes it very fast. This makes it possible for us to play with bigger datasets, including graphs with tens of thousands of nodes.
+  \item Conveniently, it comes with several min-cut algorithms which we can use directly without having to implement it ourselves.
+\end{enumerate}
+
+Below is a sample output of our implementation executed on some of the SNAP (REFERENCE) graph datasets:
+
+\footnotesize
+\begin{lstlisting}[mathescape=true]
+TODO: update me
+python densest_subgraph_goldberg.py
+Processing data/ca-HepPh.txt
+original: # of nodes: 12008, # of edges: 118521, density: 9.8702
+subgraph: # of nodes: 239, # of edges: 28442, density: 119.0042
+function [process_graph] finished in 135807 ms
+Processing data/ca-GrQc.txt
+original: # of nodes: 5242, # of edges: 14496, density: 2.7654
+subgraph: # of nodes: 46, # of edges: 1030, density: 22.3913
+function [process_graph] finished in 16932 ms
+Processing data/ca-AstroPh.txt
+original: # of nodes: 18772, # of edges: 198110, density: 10.5535
+subgraph: # of nodes: 565, # of edges: 18147, density: 32.1186
+function [process_graph] finished in 219283 ms
+Processing data/email-Enron.txt
+original: # of nodes: 36692, # of edges: 183831, density: 5.0101
+subgraph: # of nodes: 555, # of edges: 20726, density: 37.3441
+function [process_graph] finished in 1033592 ms
+Processing data/ca-HepTh.txt
+original: # of nodes: 9877, # of edges: 25998, density: 2.6322
+subgraph: # of nodes: 32, # of edges: 496, density: 15.5
+function [process_graph] finished in 70048 ms
+Processing data/ca-CondMat.txt
+original: # of nodes: 23133, # of edges: 93497, density: 4.0417
+subgraph: # of nodes: 30, # of edges: 404, density: 13.4667
+function [process_graph] finished in 369477 ms
+\end{lstlisting}
+
+\normalsize
+
+This exercise also help us better understand Goldberg's exact algorithm, which gave us the idea of formulating the distributed version of the algorithm described above.
+
 \subsection{Hadoop Implementation \& Improvement}
 \subsection{Giraph Adaptation}
 
