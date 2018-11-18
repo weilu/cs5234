@@ -53,11 +53,11 @@ The density of a graph is defined as the number of edges divided by the number o
   \rho(G) = \frac{m}{n}
 \end{equation}
 
-Where $m$ is the number of edges and $n$ is the number of nodes of graph $G$. This is a convention we are going to use consistently for the rest of this report.
+Where $m$ is the number of edges and $n$ is the number of nodes of graph $G$.
 
-A dense subgraph is induced by a set of nodes in the original graph with many edges connecting them. The problem of finding the densest subgraph for undirected graphs is first formalized by Andrew Goldberg in 1984 \cite{Goldberg:CSD-84-171}. He proposed a polynomial time exact algorithm for both unweighted and weighted graphs. It has been an active area research since. This class of problems are interesting not just from a theoretical perspective, they also have a lot of practical applications, such as community detection in social networks, web link spam detection for search engines, and correlation mining for gene, item or time series datasets. Such graph datasets are usually large with millions and even billions of nodes, which makes poly-time algorithm impractical. This prompts research in the direction of both distributed and approximation algorithms.
+A dense subgraph is induced by a set of nodes in the original graph with many edges connecting them. The problem of finding the densest subgraph for undirected graphs is first formalized by Andrew Goldberg in 1984 \cite{Goldberg:CSD-84-171}. He proposed a polynomial time exact algorithm for both unweighted and weighted graphs. It has been an active area research since. This class of problems are interesting not just from a theoretical perspective, it also has many practical applications, such as community detection in social networks, web link spam detection for search engines, and correlation mining for gene, item or time series datasets. Such graph datasets are usually large with millions and even billions of nodes, which makes poly-time algorithm impractical. This prompts research in the direction of both distributed and approximation algorithms.
 
-In our project, we limit the scope of our investigation to unweighted and undirect graphs. First, we explored both exact and approximation algorithms from existing literature for the densest subgraph problem, and formulated a distributed exact algorithm. For experimentation, we implemented Goldberg's exact algorithm, which we used to produce baselines for various datasets we experimented with. We then replicated and improved a MapReduce implementation of an approximation algorithm by Bahmani et al in Hadoop – a distributed big data processing framework built on top of the MapReduce computational model. Last but not least, we also adopted the same approximation algorithm to a distributed graph processing framework named Giraph. We will present challenges and key lessons learned and compare the Hadoop and Giraph implementations.
+In our project, we limit the scope of our investigation to unweighted and undirect graphs. First, we explored both exact and approximation algorithms in existing literature for the densest subgraph problem, and formulated a distributed exact algorithm. For experimentation, we implemented Goldberg's exact algorithm, which we used to produce baselines for various datasets we experimented with. We then replicated and improved a distributed implementation of an approximation algorithm in Hadoop – a distributed big data processing framework built on top of the MapReduce computational model. Last but not least, we adopted the same approximation algorithm to a distributed graph processing framework named Giraph. We will present challenges and key lessons learned and compare our Hadoop and Giraph implementation.
 
 \section{Algorithms and Theory}
 In this section, we will introduce Goldberg's exact algorithm and briefly cover several approximation algorithms. Lastly, we will present our distributed exact algorithms and two possible realizations.
@@ -67,7 +67,7 @@ The key idea of Goldberg's exact algorithm is to convert the original undirected
 
 \includegraphics[width=\columnwidth]{goldberg_network.png}
 
-Comparing to the original graph with nodes $V$ and edges $E$, the network has two nodes added: the source $s$ and the sink $t$: $V_N = V + \{s, t\}$, and $m + 2n$ edges added: $|E_N| = 2|E| + 2|N| = 2m + 2n$. Every original unweight and undirected edge is converted to two directed edges each with capacity 1. The capacity from $s$ to every node in the original graph is $m$; and the capacity from every node $i$ in the original graph to $t$ is assigned $m + 2g - d_i$, where $d_i$ is the degree of node $i$ in the original graph, and $g$ is a guessed value which the algorithm is going to iteratively ``sandwich'' by finding the min-cut until $g$ converges to the density of the densest subgraph.
+Comparing to the original graph with nodes $V$ and edges $E$, the network has two nodes added: the source $s$ and the sink $t$: $V_N = V + \{s, t\}$, and $m + 2n$ edges added: $|E_N| = 2|E| + 2|N| = 2m + 2n$. Every original unweight and undirected edge is converted to two directed edges each with capacity 1. The capacity from $s$ to every node in the original graph is set to $m$; and the capacity from every node $i$ in the original graph to $t$ is assigned $m + 2g - d_i$, where $d_i$ is the degree of node $i$ in the original graph, and $g$ is a guessed value which the algorithm is going to iteratively ``sandwich'' by finding the min-cut until $g$ converges to the density of the densest subgraph.
 
 The pseudocode for the algorithm is as below:
 
@@ -101,12 +101,12 @@ The intuition here is that the min-cut either goes throught all the out-edges of
 
 Since the value of $g$ is determined through binary search in the range of $[\frac{1}{n(n-1)}, m]$, it requires $log(n(n-1) \cdot m) = O(log(n^4)) = O(logn)$ iterations to terminate. Each iteration's running time is bounded by the time spent finding the min-cut in the contructed flow network.
 
-There's extensive literature on finding s-t min-cut. The best known exact algorithm for general graphs is by Nagamochi and Ibaraki, which runs in time $O(mn + n^2logn)$ \cite{Nagamochi:1992:CEM:131829.131833}. In comparison, the classic push-relabel algorithm by Goldberg and Tarjan runs in $O(n^3)$ time for a sequential implementation \cite{Goldberg:1988:NAM:48014.61051}. Therefore for very dense subgraphs $m \approx n^2$, the best known min-cut algorithm's time complexity is also bounded by $O(n^3)$. Using $O(n^3)$ as the upper bound, the Goldberg densest subgraph algorithm described above has running time of $O(n^3logn)$.
+There's extensive literature on finding s-t min-cut. The best known exact algorithm for general graphs is by Nagamochi and Ibaraki, which runs in time $O(mn + n^2logn)$ \cite{Nagamochi:1992:CEM:131829.131833}. In comparison, the classic push-relabel algorithm by Goldberg and Tarjan runs in $O(n^3)$ time for a sequential implementation \cite{Goldberg:1988:NAM:48014.61051}. For very dense graphs $m \approx n^2$, the best known min-cut algorithm's time complexity is also bounded by $O(n^3)$. Using $O(n^3)$ as the upper bound, the Goldberg densest subgraph algorithm described above has running time of $O(n^3logn)$.
 
-We apprciate the cleverness of this algorithm in which one graph problem (densest subgraph) is translated to another graph problem (min-cut) through converting the original graph to a network flow with carefully assigned capacities. This is a common and effective technique we have come across while conducting literature review for this project.
+We admire the cleverness of this algorithm in which one graph problem (densest subgraph) is translated to another graph problem (min-cut) through converting the original graph to a network flow with carefully assigned capacities. This appears to be an effective technique we can adopt for future algorithmic research.
 
 \subsection{Approximation Algorithms}
-We would like to focus on one approximation algorithm for finding densest subgraph in this section. It is proposed by Bahmani, Kumar, and Vassilvitskii \cite{Bahmani:2012:DSS:2140436.2140442}. The algorithm provides a $2 + 2\varepsilon$ approximation solution that completes in $O((m+n)logn$ time for a sequential implementation. We find this algorithm most impressive among its kind for the following reasons:
+We would like to focus on one approximation algorithm for finding densest subgraph in this section. It is proposed by Bahmani, Kumar, and Vassilvitskii \cite{Bahmani:2012:DSS:2140436.2140442}. The algorithm provides a $2 + 2\varepsilon$ approximation solution that completes in $O((m+n)logn)$ time for a sequential implementation. We find this algorithm most impressive among its kind for the following reasons:
 
 \begin{enumerate}
   \item Its distributed implementation completes in $O(logn)$ rounds,
@@ -156,7 +156,7 @@ We can see that for every round of the algorithm, it reduces the graph size by a
   \end{split}
 \end{equation}
 
-Therefore the algorithm terminates in $O(log_{(1+\varepsilon)}n)$ rounds. At each round, we check every node, which needs to count all its neighboring edges to get its degree, so the work per round is $O(m+n)$. Since degree is a node local property, the algorithm can therefore be distributed at every round.
+Therefore the algorithm terminates in $O(log_{(1+\varepsilon)}n)$ rounds. At each round, we check every node, which needs to count all its neighboring edges to get its degree, so the work per round is $O(m+n)$. Since degree is a node local property, the algorithm can therefore be distributed within each round.
 
 \subsection{Distributed Exact Algorithms}
 As a thought exercise, we explored possible formulations of a distributed exact algorithm for the densest subgraph problem. Our idea is to build the algorithm on top of Goldberg's min-cut based algorithm – we couldn't get around the outer loop which repeats $O(logn)$ times, so we looked into ways to distribute the min-cut finding algorithm, similar to how Bahmani's algorithm distributed the work within each round.
@@ -203,16 +203,16 @@ The above procedure is repeated until there's no more active node. Since the des
 The original paper stated and proved that the above procedure can be completed in $O(n^2)$ rounds, which makes our distributed exact algorithm for the densest subgraph problem run in $O(n^2logn)$ time. This is an improvement from the $O(n^3logn)$ time complexity of the original Goldberg min-cut based algorithm, however it's still $n^2$ factor slower than the $2+2\varepsilon$ approximation algorithm. This makes a good thought exercise, but this distributed exact algorithm is infeasible for large graphs with millions and billions of nodes.
 
 
-\section{Implementations and experiments}
-Among the algorithms described above, we've implemented Goldberg's min-cut based exact algorithmin python, and Bahmani's $(2+2\varepsilon)$ approximation algorithm in python, Hadoop and Giraph. In the following section, we will describe our implementations including the challenges we've faced and resolved and lessons learned.
+\section{Implementation and experiments}
+Among the algorithms described above, we've implemented Goldberg's min-cut based exact algorithmin Python, and Bahmani's $(2+2\varepsilon)$ approximation algorithm in Python, Hadoop and Giraph. In the following section, we will describe our implementation, the challenges we've faced and resolved, and lessons learned.
 
 \subsection{Baseline Implementation}
-First, in order to provide the ground truth for any experiment datasets we may want to play with, we implemented Goldberg's exact algorithm. We chose to use the library graph-tool\footnote{Project homepage: \url{https://graph-tool.skewed.de/}} for this implementation for the following reasons:
+First, in order to provide the ground truth for any experiment datasets we want to play with, we implemented Goldberg's exact algorithm. We chose to use the library graph-tool\footnote{Project homepage: \url{https://graph-tool.skewed.de/}} for this implementation for the following reasons:
 
 \begin{enumerate}
-  \item It provides an intuitive and effective python interface for handling graphs.
+  \item It provides an intuitive and effective Python interface for handling graphs.
   \item Internally, its data structures and algorithms are implemented in C++, which makes it very fast. This makes it possible for us to play with bigger datasets, including graphs with tens of thousands of nodes.
-  \item Conveniently, it comes with several min-cut algorithms\footnote{Available min-cut algorithm implementations: \url{https://graph-tool.skewed.de/static/doc/flow.html}} which we can use directly without having to implement it ourselves.
+  \item Conveniently, it comes with several min-cut algorithms\footnote{Available min-cut algorithm implementation: \url{https://graph-tool.skewed.de/static/doc/flow.html}} which we can use directly without having to implement it ourselves.
 \end{enumerate}
 
 Below is a sample output of our implementation executed on some of the Stanford Network Analysis Project (SNAP) graph datasets\footnote{SNAP datasets: \url{https://snap.stanford.edu/data/}}:
@@ -252,14 +252,14 @@ function [process_graph] finished in 33418 ms
 
 We preprocessed the edge list data from SNAP because we noticed that though the datasets are labelled ``undirected'', it's not always guaranteed that every node pair only appears once, nor the matching reverse pair always exists. Our preprocessing script scans through all the edges and if $(a, b)$ and $(b, a)$ both exist, we only keep one of them in the \texttt{*\_preprocessed.txt} files.
 
-Running the exact algorithm implementation on real-world data provides us with the ground truth of the densest subgraphs. We used results from this exercies to verify that our Hadoop and Giraph implementations of the approximation algorithm produce correct results within the theoretical bounds. In addition, the timing information is also useful as performance baseline to gauge the scale of data a single machine is able to handle, for example, according to the above output, on a MacBook Air with 1.6 GHz Intel Core i5 processor, with 16 GB RAM, it took about 9 minutes to execute the exact algorithm on the Enron email dataset which has 36K+ nodes.
+Running the exact algorithm implementation on real-world data provides us with the ground truth of the densest subgraphs. We used results from this exercies to verify that our Hadoop and Giraph implementation of the approximation algorithm produce correct results within the theoretical bounds. In addition, the timing information is also useful as performance baseline to gauge the scale of data a single machine is able to handle, for example, according to the above output, on a MacBook Air with 1.6 GHz Intel Core i5 processor, with 16 GB RAM, it took about 9 minutes to execute the exact algorithm on the Enron email dataset which has 36K+ nodes.
 
 This exercise of implementing Goldberg's exact algorithm also helped us better understand the algorithm, which gave us the idea of formulating the distributed version of the algorithm described above.
 
 \subsection{Hadoop Implementation \& Improvement}
-Hadoop is an open source implementation of the MapReduce programming model proposed by Dean and Ghemawat from Google. The MapReduce model is designed to facilitate general purpose distributed big data processing \cite{Dean:2004:MSD:1251254.1251264}. A MapReduce job is made of two phases: the Map phase reads key-value pairs from a distributed file system and perform operations such as filtering and transformation and emit intermediate key-value pairs as output. The framework then takes care of shuffling the intermediate output and group them by key and send those with the same key to the same reducer for the Reduce phase. The Reduce phase is analogous to the reduce function in functinoal programming. This is where values of the same key can be aggregated or tallied according to the user defined reduce function. The output of the Reduce phase is then written into the distributed file system. Multiple MapReduce jobs can be chained to form a workflow to handle general purpose data processing at scale.
+Hadoop is an open source implementation of the MapReduce programming model proposed by Dean and Ghemawat from Google. The MapReduce model is designed to facilitate general purpose distributed big data processing \cite{Dean:2004:MSD:1251254.1251264}. A MapReduce job is made of two phases: the Map phase reads key-value pairs from a distributed file system and perform operations such as filtering and transformation and emit intermediate key-value pairs as output. The framework then takes care of shuffling the intermediate output and group them by key and send those with the same key to the same reducer for the Reduce phase. The Reduce phase is analogous to the reduce function in functinoal programming. This is where values of the same key can be aggregated or tallied according to the user defined reduce function. The output of the Reduce phase is then written into the distributed file system. Multiple MapReduce jobs can be chained to form a workflow pipeline to handle general purpose data processing at scale.
 
-The MapReduce model heavily relies on the underlying distributed file system to efficiently manage data distribution and replication. One groundbreaking idea of MapReduce is to bring the computation to data whenever possible, rather than moving data from a separate storage to computation clusters. This in a distributed setting saves time spent on network IO which speeds up the data processing. Hadoop comes with its own implementation of the distributed file system named Hadoop Distributed File System (HDFS).
+The MapReduce model heavily relies on the underlying distributed file system to efficiently manage data distribution and replication. One groundbreaking idea of MapReduce is to bring the computation to data whenever possible, rather than moving data from a separate storage to computation clusters. This in a distributed setting saves time spent on network IO which speeds up data processing. Hadoop comes with its own implementation of the distributed file system named Hadoop Distributed File System (HDFS).
 
 We used Hadoop Streaming with Python to implement the densest subgraph approximation algorithm. Hadoop Streaming is a Hadoop utility that enables creating and running MapReduce jobs with any executable or script as mappers/reducers. The scripts simply need to read the streaming input through \texttt{stdin}. This utility allows MapReduce jobs to be written in other programming languages besides the de facto framework language Java.
 
@@ -275,8 +275,8 @@ We improved the original Hadoop implementation proposed in the Bahmani paper by 
 
 \begin{tabular}{|c|c|c|c|}
 \hline
-\multirow{2}{*}{ Dataset } & \multicolumn{2}{|c|}{ Running Time (seconds) } & \multirow{2}{*}{ Speed-up } \\
-& Original Implementation & Improved Implementation & \\
+\multirow{2}{*}{ Dataset } & \multicolumn{2}{|c|}{ Running Time in Seconds for $\varepsilon=0.001$ } & \multirow{2}{*}{ Speed-up } \\
+& Original Implementation  & Improved Implementation & \\
 \hline
 ca-AstroPh & 279.5 & 156.3 & 1.8x \\
 ca-CondMat & 275.2 & 141.0 & 2.0x \\
@@ -288,11 +288,11 @@ email-Enron & 287.2 & 148.0 & 1.9x \\
 \end{tabular}
 
 \subsection{Giraph Adaptation}
-Giraph is an open source distributed data processing framework specifically designed for processing graphs. It implements the Pregel computational model \cite{Malewicz:2010:PSL:1807167.1807184}, which in turn is inspired by Valiant’s Bulk Synchronous Parallel model \cite{Valiant:1990:BMP:79173.79181}. It models the data processing as a sequence of iterations, each iteration is called a ``superste''. At each superstep, a user defined function is executed, conceptually in parallel for every node of the graph. A vertex can perform update and mutation actions such as changing its label data and removing its neighboring edges, as well as sending messages to its neighboring nodes over outgoing edges and processing any incoming messages from the previous superstep.
+Giraph is an open source distributed data processing framework specifically designed for handling graphs. It implements the Pregel computational model \cite{Malewicz:2010:PSL:1807167.1807184}, which in turn is inspired by Valiant’s Bulk Synchronous Parallel model \cite{Valiant:1990:BMP:79173.79181}. It models the data processing as a sequence of iterations, each iteration is called a ``superstep''. At each superstep, a user defined function is executed, conceptually in parallel for every node of the graph. At each node, the function can perform update and mutation actions such as changing the node's label data and removing its neighboring edges, as well as sending messages to its neighboring nodes over outgoing edges and processing any incoming messages from the previous superstep.
 
-Giraph is built on top of Hadoop, since both distributed computational models let user focus on local actions and a superstep can naturally be translated to a MapReduce step. Giraph also added additional features beyond what is described in the original Pregel paper, such as master computation which can be used to facilitate global computation and coordination before the execution of the node centric user defined function of a superstep. This is particularly useful in our case as the algorithm requires calculating the density of the remaining graph at every iteration. During our implementation we find it conceptually helpful to think of a superstep as made of a \texttt{MasterCompute} substep followed by a \texttt{BasicCompute} substep.
+Giraph is built on top of Hadoop, since both distributed computational models let user focus on local actions and a superstep can naturally be translated to a MapReduce step. Giraph also added additional features beyond what is described in the original Pregel paper, such as master computation which can be used to facilitate global computation and coordination before the execution of the node centric user defined function of a superstep. This is particularly useful in our case as the algorithm requires calculating the density of the remaining graph at every iteration. We find it conceptually helpful to think of a superstep as made of a \texttt{MasterCompute} substep followed by a \texttt{BasicCompute} substep.
 
-To adapt the densest subgraph approximation algorithm to Giraph, first we need to duplicate and reverse the input edge list in order to represent undirect graphs. Giraph comes with a built-in java class \texttt{IntNullReverseTextEdgeInputFormat} which handles this exact case. Then we define our vertex centric function as part of the \texttt{BasicComputate} substep:
+To adapt the densest subgraph approximation algorithm to Giraph, first we need to duplicate and reverse the input edge list in order to represent undirect graphs. Giraph comes with a built-in java class \texttt{IntNullReverseTextEdgeInputFormat} which handles this exact case. Then we define our node centric function as part of the \texttt{BasicComputate} substep:
 
 \begin{lstlisting}
   Get degree threshold value computed by MasterCompute
@@ -318,16 +318,16 @@ Communication between \texttt{MasterCompute} and \texttt{BasicCompute} is achiev
 
 Note that every node owns its outgoing edges, but not its incoming edges. This means that removing a node also removes its outgoing edges, but not its incoming edges. Since each \texttt{BasicCompute} substep is node local, any attempt at removing an edge that a node doesn't own will not take any effect, including any of its incoming edges. Therefore we utilize messaging to signal the edge owner to remove the incoming edges of any removed node.
 
-Giraph also keeps track of every node's degree and totally number of edges and nodes of the graph by default. However, it's worth pointing out that although total number of edges and nodes are accessible at any time for both \texttt{MasterCompute} and \texttt{BasicCompute}, the values are only consistent with the state of the graph from the previous superstep. In addition, not all mutation operations are executed instantly: In our case, \texttt{removeEdges} is considered a vertex-local operation so it's instantly executed in the same superstep, but \texttt{removeVertexRequest} is only carried out by the framework in the next superstep. Combining the lagged view and delayed operation, it means that the \texttt{MasterCompute} will only observe the updated total number of nodes and edges resulted from node removal 2 supersteps later; while \texttt{MasterCompute} will observe the updated total number of nodes and edges resulted from edge removal 1 supersteps later. This is important to note as it was a source of bug when synchronization is required to guarantee correctness of the algorithm. A common technique used is to check the current superstep count (\texttt{getSuperstep}), and perform different actions accordingly, e.g. only perform action 1 on even supersteps. Our adoption of the same technique resulted in the following Giraph workflow:
+Giraph also keeps track of every node's degree and totally number of edges and nodes of the graph by default. However, it's worth pointing out that although total number of edges and nodes are accessible at any time for both \texttt{MasterCompute} and \texttt{BasicCompute}, the values are only consistent with the state of the graph from the previous superstep. In addition, not all mutation operations are executed instantly: In our case, \texttt{removeEdges} is considered a vertex-local operation so it's instantly executed in the same superstep, but \texttt{removeVertexRequest} is only carried out by the framework in the next superstep. Combining the lagged view and delayed operation, it means that the \texttt{MasterCompute} will only observe the updated total number of nodes and edges resulted from node removal two supersteps later; while \texttt{MasterCompute} will observe the updated total number of nodes and edges resulted from edge removal one supersteps later. This is important to note as it was a source of bug when synchronization is required to guarantee correctness of the algorithm. A common technique used is to check the current superstep count (\texttt{getSuperstep}), and perform different actions accordingly, e.g. only perform action 1 on even supersteps. Our adoption of the same technique resulted in the following Giraph workflow:
 
 \includegraphics[width=0.8\columnwidth]{giraph_job.png}
 
 Another caveat to note is that by default, Giraph will recreate a deleted node when any message is received by that node. This behavior can be disabled through job run configuration option \texttt{giraph.vertex.resolver.create.on.msgs}.
 
-In the process of implementing the Giraph adaption of the approximation algorithm, we realized that it's difficult to reason and debug such a distributed program due to unfamiliarity with the framework. One thing that really helped speed up the debugging process is to implement the approximation algorithm in pure python and print out the expected number of nodes, edges and degree threshold at every iteration. Since the algorithm is simple and runs fast, the python implementation is quick to implement and easy to run on a small dataset. By comparing the debug output from the python program and the Giraph program, we are able to track down the sources of the issues and understand quirks and features of the Giraph framework.
+In the process of implementing the Giraph adaption of the approximation algorithm, we realized that it's difficult to reason and debug such a distributed program due to unfamiliarity with the framework. One thing that really helped speed up the debugging process is to implement the approximation algorithm in pure Python and print out the expected number of nodes, edges and degree threshold at every iteration. Since the algorithm is simple and runs fast, the Python implementation is quick to implement and easy to run on a small dataset. By comparing the debug output from the Python program and the Giraph program, we are able to track down the sources of the issues and understand quirks and features of the Giraph framework.
 
 \subsection{Experiment Results}
-Below we present the densest subgraph density produced by our various implementations:
+Below we present the densest subgraph density values produced by our various implementation:
 
 \begin{landscape}
 \begin{tabular}{|c|c|ccc|ccc|ccc|}
@@ -355,9 +355,9 @@ Dataset                        & Actual Density & $\varepsilon=0.001$ & $\vareps
 \hline
 \end{tabular}
 
-As we can see, our approximation implementations produced consistent results and they are within the theoretical bounds when compared with the ground truth results.
+As we can see, all our approximation implementation produced consistent results and they are within the theoretical bounds when compared with the ground truth results.
 
-We were hoping to compare the speed performance of our Hadoop and Giraph implementations, however the framework overhead predominated in our experiments making the results not meaningful, therefore we omit them here.
+We were hoping to compare the speed performance of our Hadoop and Giraph implementation, however the framework overhead predominated in our experiments making the results not meaningful, therefore we omit them here.
 
 \end{landscape}
 
@@ -366,12 +366,12 @@ We were hoping to compare the speed performance of our Hadoop and Giraph impleme
 In this project, we explored both exact and approximation algorithms for finding the densest subgraph for undirected and unweighted graphs. The key takeaways from the theory front are summarized as follow:
 
 \begin{enumerate}
-  \item We can convert a new graph problem to a different one to which there's already existing algorithms solutions. We've seen this done in Goldberg's exact algorithm for densest subgraph where he converted the graph to a network flow, and reduced the problem to finding minimum cut repeatedly.
+  \item We can convert a new graph problem to a different one to which there's already existing algorithm solutions. We've seen this done in Goldberg's exact algorithm for densest subgraph where he converted the graph to a network flow, and reduced the problem to finding minimum cut repeatedly.
   \item It's possible to convert some approximation algorithm to exact algorithm by setting appropriate values for the error term. We've seen this done by Nanongkai \& Su in their distributed approximation algorithm.
   \item A sequential algorithm can be converted to a distributed algorithm by distributing work within each iteration. We've done this as a thought exercise in formulating a distributed exact algorithm for finding densest subgraph based on Goldberg's algorithm.
 \end{enumerate}
 
-On the implementation and experiment front, we've successfully implemented Goldberg's exact algorithm and Bahmani's approximation algorithm in python. We've implemented and improved the Hadoop implementation of Bahmani's approximation algorithm using Hadoop Streaming. We also adapted the same algorithm to the Giraph framework. We presented the challenges we faced and resolved in the implementation process. Not only we've learned the quirks and features of distributed data processing frameworks Hadoop and Giraph, also we learned useful lessons on debugging distributed implementations:
+On the implementation and experiment front, we've successfully implemented Goldberg's exact algorithm and Bahmani's approximation algorithm in Python. We've implemented and improved the Hadoop implementation of Bahmani's approximation algorithm using Hadoop Streaming. We also adapted the same algorithm to the Giraph framework. We presented the challenges we faced and resolved in the implementation process. We've learned not only the quirks and features of distributed data processing frameworks Hadoop and Giraph, but also useful lessons on debugging distributed implementation:
 
 \begin{enumerate}
   \item It's helpful to have a reference non-distributed implementation of an algorithm. This is especially useful when one is dealing with an unfamiliar distributed framework.
@@ -390,7 +390,8 @@ All source code is available at \url{https://github.com/weilu/cs5234}. Please fo
   \item Data preprocessing: \href{https://github.com/weilu/cs5234/blob/master/preprocess.py}{preprocess.py}
   \item Goldberg's exact algorithm: \href{https://github.com/weilu/cs5234/blob/master/densest_subgraph_goldberg.py}{densest\_subgraph\_goldberg.py}
   \item Bahmani's approximation algorithm (non-distributed): \href{https://github.com/weilu/cs5234/blob/master/densest_subgraph_approx.py}{densest\_subgraph\_approx.py}
-  \item Bahmani's approximation algorithm Hadoop implementation: \href{https://github.com/weilu/cs5234/tree/master/hadoop}{/hadoop}
+  \item Bahmani's approximation algorithm Hadoop implementation: \href{https://github.com/weilu/cs5234/tree/master/hadoop_naive}{/hadoop\_naive}
+  \item Bahmani's approximation algorithm Hadoop implementation improved: \href{https://github.com/weilu/cs5234/tree/master/hadoop_improved}{/hadoop\_improved}
   \item Bahmani's approximation algorithm Giraph implementation: \href{https://github.com/weilu/cs5234/tree/master/giraph/}{/giraph}
   \item Bahmani's approximation algorithm Hadoop implementation executable on AWS EMR: \href{https://github.com/weilu/cs5234/tree/hadoop2/hadoop2}{folder /hadoop2 on git branch hadoop2}
 \end{itemize}
