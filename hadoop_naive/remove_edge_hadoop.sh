@@ -16,8 +16,8 @@ hadoop jar $HADOOP_STREAMING/hadoop-streaming-3.1.1.jar \
         -reducer "python3 remove_edge_second_reducer.py" \
         -jobconf mapred.reduce.tasks=2
 
-#hdfs dfs -getmerge $HDFS_TMP_PATH/graph/ ./graph_second.temp
 hdfs dfs -rm -r $HDFS_TMP_PATH/graph.temp/
+#hdfs dfs -getmerge $HDFS_TMP_PATH/graph/ ./graph_second.temp
 
 hadoop jar $HADOOP_STREAMING/hadoop-streaming-3.1.1.jar \
         -input $HDFS_TMP_PATH/graph/ \

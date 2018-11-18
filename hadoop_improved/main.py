@@ -36,6 +36,9 @@ def main(argv):
 	opt_n = opt_m = 0
 	opt_density = 0
 
+	# start running hadoop
+	start_time = time.time()
+
 	os.system('hdfs dfs -mkdir /user/hduser/'+filename+timestamp+' > local.log')
 	os.system('hdfs dfs -mkdir /user/hduser/'+filename+timestamp+'/temp/ > local.log')
 	os.system('hdfs dfs -put -f'+' '+filepath+' '+'/user/hduser/'+filename+timestamp+'/graph.in > local.log')
@@ -59,13 +62,16 @@ def main(argv):
 			opt_n = n
 			opt_m = m
 			opt_density = new_density
-			os.system('hdfs dfs -cp -f /user/hduser/'+filename+timestamp+'/temp/graph.temp/'\
-				+' '+'/user/hduser/'+filename+timestamp+'/temp/graph.clone/ > local.log')
+			#os.system('hdfs dfs -cp -f /user/hduser/'+filename+timestamp+'/temp/graph.temp/'\
+			#	+' '+'/user/hduser/'+filename+timestamp+'/temp/graph.clone/ > local.log')
 	
-	os.system('hdfs dfs -cp -f /user/hduser/'+filename+timestamp+'.temp/graph.clone/'+' '\
-		+'/user/hduser/'+filename+timestamp+'.out/ > local.log')
+	#os.system('hdfs dfs -cp -f /user/hduser/'+filename+timestamp+'/temp/graph.clone/'+' '\
+	#	+'/user/hduser/'+filename+timestamp+'.out/ > local.log')
 
+	elapsed_time = time.time() - start_time
+	
 	print()
+	print('(Improved) Elapsed Time', elapsed_time)
 	print('Results:')
 	print('Output Graph Path on HFDS:')
 	print(filepath)
