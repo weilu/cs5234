@@ -138,7 +138,7 @@ if __name__ == '__main__':
     inputs = glob(os.path.join("data", "*_preprocessed.txt"))
     for filename in inputs:
         with open(filename) as f:
-            print(f'Processing {filename}')
+            print(f'\nProcessing {filename}')
             lines = f.readlines()
             graph = list(map(lambda l: tuple(l.split()), lines))
             outname = os.path.splitext(os.path.basename(filename))[0]
