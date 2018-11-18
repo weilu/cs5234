@@ -217,7 +217,6 @@ First, in order to provide the ground truth for any experiment datasets we may w
 
 Below is a sample output of our implementation executed on some of the Stanford Network Analysis Project (SNAP) graph datasets\footnote{SNAP datasets: \url{https://snap.stanford.edu/data/}}:
 
-\footnotesize
 \begin{lstlisting}[mathescape=true]
 python densest_subgraph_goldberg.py
 Processing data/ca-AstroPh_preprocessed.txt
@@ -250,8 +249,6 @@ original: # of nodes: 9877, # of edges: 25998, density: 2.6322
 subgraph: # of nodes: 32, # of edges: 496, density: 15.5
 function [process_graph] finished in 33418 ms
 \end{lstlisting}
-
-\normalsize
 
 We preprocessed the edge list data from SNAP because we noticed that though the datasets are labelled ``undirected'', it's not always guaranteed that every node pair only appears once, nor the matching reverse pair always exists. Our preprocessing script scans through all the edges and if $(a, b)$ and $(b, a)$ both exist, we only keep one of them in the \texttt{*\_preprocessed.txt} files.
 
