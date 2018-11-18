@@ -1,4 +1,5 @@
 \documentclass{article}
+\usepackage{parskip}
 \usepackage[utf8]{inputenc}
 \usepackage{mathptmx}
 \usepackage{microtype}
@@ -8,9 +9,18 @@
 \usepackage{subcaption}
 \usepackage{float}
 \usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{pdflscape}
 
 \usepackage{listings}
-\lstdefinestyle{withframe}{frame=single}
+\lstdefinestyle{withframe}{
+  frame=single,
+  showstringspaces=false, % don't mark spaces in strings
+  commentstyle=\color{green}, % comment color
+  keywordstyle=\color{blue}, % keyword color
+  stringstyle=\color{red}, % string color
+  basicstyle=\footnotesize\ttfamily,
+}
 \lstset{style=withframe}
 
 \usepackage{cite}
@@ -67,11 +77,11 @@ The pseudocode for the algorithm is as below:
     $g = \frac{u+l}{2}$
     Construct network the updated g: $N = (V_N, E_N, g)$
     Find min-cut (S, T)
-    if S = \{s\}
+    if S = {s}
       u = g
     else
       l = g
-      $V_1 = S - {s}$
+      $V_1 = S - \{s\}$
   end
 \end{lstlisting}
 
@@ -274,24 +284,25 @@ Giraph is built on top of Hadoop, since both distributed computational models le
 
 To adapt the densest subgraph approximation algorithm to Giraph, first we need to duplicate and reverse the input edge list in order to represent undirect graphs. Giraph comes with a built-in java class \texttt{IntNullReverseTextEdgeInputFormat} which handles this exact case. Then we define our vertex centric function as part of the \texttt{BasicComputate} substep:
 
-\begin{enumerate}
-  \item Get degree threshold value computed by \texttt{MasterCompute} if there is any
-  \item If the node's degree (\texttt{getNumEdges}) is smaller than the threshold:
-  \begin{enumerate}
-    \item Remove the current node in the next superstep (\texttt{removeVertexRequest})
-    \item Message all its neighboring nodes to remove in-edges (\texttt{sendMessageToAllEdges})
-  \end{enumerate}
-  \item For every message received from previous superstep, remove out-edge (\texttt{removeEdges}).
-\end{enumerate}
+\begin{lstlisting}
+  Get degree threshold value computed by MasterCompute
+  If the node's degree (getNumEdges) is smaller than the threshold:
+    Remove current node in the next superstep (removeVertexRequest)
+    Message all neighbors to remove in-edges (sendMessageToAllEdges)
+  For every message received from previous superstep:
+    remove out-edge (removeEdges)
+\end{lstlisting}
 
 And for our \texttt{MasterCompute}:
 
-\begin{enumerate}
-  \item If total number of nodes (\texttt{getTotalNumVertices}) is zero, terminate
-  \item Calculate current density and degree threshold
-  \item Update global \texttt{Aggregator} value
-  \item Read maximum density from a global \texttt{Aggregator}. If it's smaller than current density, update it to be current density value.
-\end{enumerate}
+\begin{lstlisting}
+  If total number of nodes (getTotalNumVertices) is zero, terminate
+  Calculate current density and degree threshold
+  Update global Aggregator value for threshold
+  Read maximum density from a global Aggregator
+  If max density smaller than current density:
+    update Aggregator max density to current density value
+\end{lstlisting}
 
 Communication between \texttt{MasterCompute} and \texttt{BasicCompute} is achieved through \texttt{Aggregators} which is initialized and registered by \texttt{MasterCompute} upon its own initialization. Internally, it reads and writes values onto the distributed file system (HDFS).
 
@@ -304,6 +315,40 @@ Giraph also keeps track of every node's degree and totally number of edges and n
 Another caveat to note is that by default, Giraph will recreate a deleted node when any message is received by that node. This behavior can be disabled through job run configuration option \texttt{giraph.vertex.resolver.create.on.msgs}.
 
 In the process of implementing the Giraph adaption of the approximation algorithm, we realized that it's difficult to reason and debug such a distributed program due to unfamiliarity with the framework. One thing that really helped speed up the debugging process is to implement the approximation algorithm in pure python and print out the expected number of nodes, edges and degree threshold at every iteration. Since the algorithm is simple and runs fast, the python implementation is quick to implement and easy to run on a small dataset. By comparing the debug output from the python program and the Giraph program, we are able to track down the sources of the issues and understand quirks and features of the Giraph framework.
+
+\subsection{Experiment Results}
+Below we present the densest subgraph density produced by our various implementations:
+
+\begin{landscape}
+\begin{tabular}{|c|c|ccc|ccc|ccc|}
+\hline
+                               & Python (exact) & \multicolumn{3}{|c|}{ Python (approximation) } & \multicolumn{3}{|c|}{ Hadoop } & \multicolumn{3}{|c|}{ Giraph }   \\
+Dataset                        & Actual Density & $\varepsilon=0.001$ & $\varepsilon=0.1$ & $\varepsilon=1$ & $\varepsilon=0.001$ & $\varepsilon=0.1$ & $\varepsilon=1$ & $\varepsilon=0.001$ & $\varepsilon=0.1$ & $\varepsilon=1$ \\
+\hline
+\multirow{2}{*}{ ca-AstroPh }  & 32.119         & 28.018  & 27.971  & 26.359                   & 28.009  & 27.980  & 26.354   & 28.018  & 27.971  & 26.359     \\
+                               & approx/actual  & 1.146   & 1.148   & 1.219                    & 1.147   & 1.148   & 1.219    & 1.146   & 1.148   & 1.219      \\
+\hline
+\multirow{2}{*}{ ca-CondMat }  & 13.467         & 12.615  & 12.615  & 8.726                    & 12.558  & 12.558  & 8.682    & 12.615  & 12.615  & 8.726      \\
+                               & approx/actual  & 1.067   & 1.067   & 1.543                    & 1.072   & 1.072   & 1.551    & 1.067   & 1.067   & 1.543      \\
+\hline
+\multirow{2}{*}{ ca-GrQc }     & 22.391         & 22.391  & 21.956  & 18.209                   & 22.391  & 20.500  & 18.819   & 22.391  & 21.956  & 18.209     \\
+                               & approx/actual  & 1.000   & 1.020   & 1.230                    & 1.000   & 1.092   & 1.190    & 1.000   & 1.020   & 1.230      \\
+\hline
+\multirow{2}{*}{ ca-HepPh }    & 119.004        & 119.004 & 117.926 & 117.697                  & 119.002 & 117.924 & 117.695  & 119.004 & 117.926 & 117.697    \\
+                               & approx/actual  & 1.000   & 1.009   & 1.011                    & 1.000   & 1.009   & 1.011    & 1.000   & 1.009   & 1.011      \\
+\hline
+\multirow{2}{*}{ ca-HepTh }    & 15.500         & 15.500  & 15.500  & 8.286                    & 15.500  & 15.500  & 8.407    & 15.500  & 15.500  & 8.286      \\
+                               & approx/actual  & 1.000   & 1.000   & 1.871                    & 1.000   & 1.000   & 1.844    & 1.000   & 1.000   & 1.871      \\
+\hline
+\multirow{2}{*}{ email-Enron } & 37.340         & 35.306  & 34.192  & 32.390                   & 35.306  & 34.192  & 32.390   & 35.306  & 34.192  & 32.390     \\
+                               & approx/actual  & 1.058   & 1.092   & 1.153                    & 1.058   & 1.092   & 1.153    & 1.058   & 1.092   & 1.153      \\
+\hline
+\end{tabular}
+
+As we can see, our approximation implementations produced consistent results and they are within the theoretical bounds when compared with the ground truth results.
+
+\end{landscape}
+
 
 \section{Conclusion}
 In this project, we explored both exact and approximation algorithms for finding the densest subgraph for undirected and unweighted graphs. The key takeaways from the theory front are summarized as follow:
