@@ -5,6 +5,10 @@ report/*.aux
 report/*.log
 report/*.out
 report/*.toc
+report/*.bbl
+report/*.bcf
+report/*.blg
+report/*.run.xml
 report/report.synctex.gz
 report/report.fdb_latexmk
 report/report.fls
