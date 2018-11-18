@@ -305,7 +305,21 @@ Another caveat to note is that by default, Giraph will recreate a deleted node w
 In the process of implementing the Giraph adaption of the approximation algorithm, we realized that it's difficult to reason and debug such a distributed program due to unfamiliarity with the framework. One thing that really helped speed up the debugging process is to implement the approximation algorithm in pure python and print out the expected number of nodes, edges and degree threshold at every iteration. Since the algorithm is simple and runs fast, the python implementation is quick to implement and easy to run on a small dataset. By comparing the debug output from the python program and the Giraph program, we are able to track down the sources of the issues and understand quirks and features of the Giraph framework.
 
 \section{Conclusion}
+In this project, we explored both exact and approximation algorithms for finding the densest subgraph for undirected and unweighted graphs. The key takeaways from the theory front are summarized as follow:
 
+\begin{enumerate}
+  \item We can convert a new graph problem to a different one to which there's already existing algorithms solutions. We've seen this done in Goldberg's exact algorithm for densest subgraph where he converted the graph to a network flow, and reduced the problem to finding minimum cut repeatedly.
+  \item It's possible to convert some approximation algorithm to exact algorithm by setting appropriate values for the error term. We've seen this done by Nanongkai \& Su in their distributed approximation algorithm.
+  \item A sequential algorithm can be converted to a distributed algorithm by distributing work within each iteration. We've done this as a thought exercise in formulating a distributed exact algorithm for finding densest subgraph based on Goldberg's algorithm.
+\end{enumerate}
+
+On the implementation and experiment front, we've successfully implemented Goldberg's exact algorithm and Bahmani's approximation algorithm in python. We've implemented and improved the Hadoop implementation of Bahmani's approximation algorithm using Hadoop Streaming. We also adapted the same algorithm to the Giraph framework. We presented the challenges we faced and resolved in the implementation process. Not only we've learned the quirks and features of distributed data processing frameworks Hadoop and Giraph, also we learned useful lessons on debugging distributed implementations:
+
+\begin{enumerate}
+  \item It's helpful to have a reference non-distributed implementation of an algorithm. This is especially useful when one is dealing with an unfamiliar distributed framework.
+  \item To verify correctness, start with a small dataset on a single worker/node. This makes debugging easier to reason.
+  \item Before setting up and experimenting on multiple remote instances, first make sure the program behaves correctly locally with multiple workers. This saves time and money.
+\end{enumerate}
 
 \bibliography{reference}{}
 \bibliographystyle{plain}
