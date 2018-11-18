@@ -1,0 +1,4 @@
+Deleted /user/hduser/email-Enron_2018Nov18_183129/temp/graph
+packageJobJar: [remove_edge_second_mapper.py, remove_edge_second_reducer.py] [] /tmp/streamjob6335626054590812954.jar tmpDir=null
+Deleted /user/hduser/email-Enron_2018Nov18_183129/temp/graph.temp
+packageJobJar: [remove_edge_first_mapper.py, remove_edge_first_reducer.py] [] /tmp/streamjob6637086183423165244.jar tmpDir=null
