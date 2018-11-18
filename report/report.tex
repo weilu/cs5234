@@ -15,6 +15,7 @@
 
 \usepackage{cite}
 \usepackage{color,soul}
+\usepackage{hyperref}
 
 \title{CS5234 Project Report}
 
@@ -43,7 +44,7 @@ The density of a graph is defined as the number of edges divided by the number o
 
 Where $m$ is the number of edges and $n$ is the number of nodes of graph $G$. This is a convention we are going to use consistently for the rest of this report.
 
-A dense subgraph is induced by a set of nodes in the original graph with many edges connecting them. The problem of finding the densest subgraph for undirected graphs is first formalized by Andrew Goldberg in 1984 (REFERENCE). He proposed a polynomial time exact algorithm for both unweighted and weighted graphs. It has been an active area research since. This class of problems are interesting not just from a theoretical perspective, they also have a lot of practical applications, such as community detection in social networks, web link spam detection for search engines, and correlation mining for gene, item or time series datasets. Such graph datasets are usually large with millions and even billions of nodes, which makes poly-time algorithm impractical. This prompts research in the direction of both distributed and approximation algorithms.
+A dense subgraph is induced by a set of nodes in the original graph with many edges connecting them. The problem of finding the densest subgraph for undirected graphs is first formalized by Andrew Goldberg in 1984 \cite{Goldberg:CSD-84-171}. He proposed a polynomial time exact algorithm for both unweighted and weighted graphs. It has been an active area research since. This class of problems are interesting not just from a theoretical perspective, they also have a lot of practical applications, such as community detection in social networks, web link spam detection for search engines, and correlation mining for gene, item or time series datasets. Such graph datasets are usually large with millions and even billions of nodes, which makes poly-time algorithm impractical. This prompts research in the direction of both distributed and approximation algorithms.
 
 In our project, we limit the scope of our investigation to unweighted and undirect graphs. First, we explored both exact and approximation algorithms from existing literature for the densest subgraph problem, and formulated a distributed exact algorithm. For experimentation, we implemented Goldberg's exact algorithm, which we used to produce baselines for various datasets we experimented with. We then replicated and improved a MapReduce implementation of an approximation algorithm by Bahman et al in Hadoop – a distributed big data processing framework built on top of the MapReduce computational model. Last but not least, we also adopted the same approximation algorithm to a distributed graph processing framework named Giraph. We will present challenges and key lessons learned and compare the Hadoop and Giraph implementations.
 
@@ -73,7 +74,7 @@ The pseudocode for the algorithm is as below:
   end
 \end{lstlisting}
 
-The intuition here is that the min-cut either goes throught all the out-edges of source node $s$, which looks like Case 1 below, or it doesn't (Case 2). In Case 1, the min-cut $c(S, T) = mn$; while for Case 2, the min-cut $c(S, T) = mn + 2n_1(g - \rho_1)$, where $n_1$ is the number of nodes in the subgraph induced by $V_1$ and $\rho_1$ is the density of the same subgraph. For detailed derivation please refer to the original paper (REFERENCE). Notice that the $mn$ term appears in both cases, so for Case 2 to be the min-cut, it has to be the case that $2n_1(g - \rho_1) < 0 \Rightarrow g < \rho_1 \leq \rho^*$ where $\rho^*$ is the densest subgraph density. It follows that when Case 1 is the min-cut, $g > \rho^*$.
+The intuition here is that the min-cut either goes throught all the out-edges of source node $s$, which looks like Case 1 below, or it doesn't (Case 2). In Case 1, the min-cut $c(S, T) = mn$; while for Case 2, the min-cut $c(S, T) = mn + 2n_1(g - \rho_1)$, where $n_1$ is the number of nodes in the subgraph induced by $V_1$ and $\rho_1$ is the density of the same subgraph. For detailed derivation please refer to the original paper \cite{Goldberg:CSD-84-171}. Notice that the $mn$ term appears in both cases, so for Case 2 to be the min-cut, it has to be the case that $2n_1(g - \rho_1) < 0 \Rightarrow g < \rho_1 \leq \rho^*$ where $\rho^*$ is the densest subgraph density. It follows that when Case 1 is the min-cut, $g > \rho^*$.
 
 \begin{figure}[H]
   \centering
@@ -89,12 +90,12 @@ The intuition here is that the min-cut either goes throught all the out-edges of
 
 Since the value of $g$ is determined through binary search in the range of $[\frac{1}{n(n-1)}, m]$, it requires $log(n(n-1) \cdot m) = O(log(n^4)) = O(logn)$ iterations to terminate. Each iteration's running time is bounded by the time spent finding the min-cut in the contructed flow network.
 
-There's extensive literature on finding s-t min-cut. The best known exact algorithm for general graphs is by Nagamochi and Ibaraki, which runs in time $O(mn + n^2logn)$ (REFERENCE). In comparison, the classic push-relabel algorithm by Goldberg and Tarjan (REFERENCE) runs in $O(n^3)$ time for a sequential implementation. Therefore for very dense subgraphs $m \approx n^2$, the best known min-cut algorithm's time complexity is also bounded by $O(n^3)$. Using $O(n^3)$ as the upper bound, the Goldberg densest subgraph algorithm described above has running time of $O(n^3logn)$.
+There's extensive literature on finding s-t min-cut. The best known exact algorithm for general graphs is by Nagamochi and Ibaraki, which runs in time $O(mn + n^2logn)$ \cite{Nagamochi:1992:CEM:131829.131833}. In comparison, the classic push-relabel algorithm by Goldberg and Tarjan runs in $O(n^3)$ time for a sequential implementation \cite{Goldberg:1988:NAM:48014.61051}. Therefore for very dense subgraphs $m \approx n^2$, the best known min-cut algorithm's time complexity is also bounded by $O(n^3)$. Using $O(n^3)$ as the upper bound, the Goldberg densest subgraph algorithm described above has running time of $O(n^3logn)$.
 
 We apprciate the cleverness of this algorithm in which one graph problem (densest subgraph) is translated to another graph problem (min-cut) through converting the original graph to a network flow with carefully assigned capacities. This is a common and effective technique we have come across while conducting literature review for this project.
 
 \subsection{Approximation Algorithms}
-We would like to focus on one approximation algorithm for finding densest subgraph in this section. It is proposed by Bahmani, Kumar, and Vassilvitskii (REFERENCE). The algorithm provides a $2 + 2\varepsilon$ approximation solution that completes in $O((m+n)logn$ time for a sequential implementation. We find this algorithm most impressive among its kind for the following reasons:
+We would like to focus on one approximation algorithm for finding densest subgraph in this section. It is proposed by Bahmani, Kumar, and Vassilvitskii \cite{Bahmani:2012:DSS:2140436.2140442}. The algorithm provides a $2 + 2\varepsilon$ approximation solution that completes in $O((m+n)logn$ time for a sequential implementation. We find this algorithm most impressive among its kind for the following reasons:
 
 \begin{enumerate}
   \item Its distributed implementation completes in $O(logn)$ rounds,
@@ -149,7 +150,7 @@ Therefore the algorithm terminates in $O(log_{(1+\varepsilon)}n)$ rounds. At eac
 \subsection{Distributed Exact Algorithms}
 As a thought exercise, we explored possible formulations of a distributed exact algorithm for the densest subgraph problem. Our idea is to build the algorithm on top of Goldberg's min-cut based algorithm – we couldn't get around the outer loop which repeats $O(logn)$ times, so we looked into ways to distribute the min-cut finding algorithm, similar to how Bahmani's algorithm distributed the work within each round.
 
-We came across a distributed min-cut algorithm by Nanongkai \& Su (REFERENCE). They proposed a $1 \pm \varepsilon$ approximation algorithm based on finding a greedy tree packing: $(1 - \varepsilon) \rho^* \leq \rho \leq (1 + \varepsilon) \rho^*$. To obtain the exact min-cut, they proposed to first obtain a 3-approximation value $\rho'$ for the min-cut using another distributed algorithm by Ghaffari \& Kuhn (REFERENCE), which guarantees that $\rho \leq \rho' \leq 3\rho^*$; then they set their error term $\varepsilon = 1/(\rho'+1)$ to obtain an exact solution:
+We came across a distributed min-cut algorithm by Nanongkai \& Su \cite{DBLP:journals/corr/NanongkaiS14}. They proposed a $1 \pm \varepsilon$ approximation algorithm based on finding a greedy tree packing: $(1 - \varepsilon) \rho^* \leq \rho \leq (1 + \varepsilon) \rho^*$. To obtain the exact min-cut, they proposed to first obtain a 3-approximation value $\rho'$ for the min-cut using another distributed algorithm by Ghaffari \& Kuhn \cite{DBLP:journals/corr/abs-1305-5520}, which guarantees that $\rho \leq \rho' \leq 3\rho^*$; then they set their error term $\varepsilon = 1/(\rho'+1)$ to obtain an exact solution:
 
 \begin{equation}
   \begin{split}
@@ -165,7 +166,7 @@ The same paper claims that the algorithm runs in $O(\rho^{*4} log^2n (D + \sqrt{
 
 Recall that for the converted network flow used in Goldberg's exact algorithm, $\rho^* = O(mn)$, therefore making the above time complexity $O(m^4 n^4 log^2n (D + \sqrt{n} log^*n))$ which is much worse than the time complexity for the sequential version of the original algorithm's $O(n^3logn)$, so it's impractical in our use case. Regardless, we still want to highlight the merit of Nanongkai's approach of using two approximation algorithms to arrive at an exact solution by setting appropriate value for the error term.
 
-Next, we turned into the classic push-relabel algorithm by Goldberg \& Tarjan (REFERENCE). Turned out, this algorithm can be implemented in a distributed setting by breaking the push step into two substeps and perform the label update in between these two substeps. The pseudocode of the algorithm is presented as below. Note that a vertex v is active if it's label $0 < d(v) < n$ and it has excess flow: $e(v) > 0$.
+Next, we turned into the classic push-relabel algorithm by Goldberg \& Tarjan \cite{Goldberg:1988:NAM:48014.61051}. Turned out, this algorithm can be implemented in a distributed setting by breaking the push step into two substeps and perform the label update in between these two substeps. The pseudocode of the algorithm is presented as below. Note that a vertex v is active if it's label $0 < d(v) < n$ and it has excess flow: $e(v) > 0$.
 
 \begin{lstlisting}[mathescape=true]
   For all active nodes v do
@@ -195,15 +196,15 @@ The original paper stated and proved that the above procedure can be completed i
 Among the algorithms described above, we've implemented Goldberg's min-cut based exact algorithmin python, and Bahmani's $(2+2\varepsilon)$ approximation algorithm in python, Hadoop and Giraph. In the following section, we will describe our implementations including the challenges we've faced and resolved and lessons learned.
 
 \subsection{Baseline Implementation}
-First, in order to provide the ground truth for any experiment datasets we may want to play with, we implemented Goldberg's exact algorithm. We chose to use the library graph-tool (REFERENCE) for this implementation for the following reasons:
+First, in order to provide the ground truth for any experiment datasets we may want to play with, we implemented Goldberg's exact algorithm. We chose to use the library graph-tool\footnote{Project homepage: \url{https://graph-tool.skewed.de/}} for this implementation for the following reasons:
 
 \begin{enumerate}
   \item It provides an intuitive and effective python interface for handling graphs.
   \item Internally, its data structures and algorithms are implemented in C++, which makes it very fast. This makes it possible for us to play with bigger datasets, including graphs with tens of thousands of nodes.
-  \item Conveniently, it comes with several min-cut algorithms which we can use directly without having to implement it ourselves.
+  \item Conveniently, it comes with several min-cut algorithms\footnote{Available min-cut algorithm implementations: \url{https://graph-tool.skewed.de/static/doc/flow.html}} which we can use directly without having to implement it ourselves.
 \end{enumerate}
 
-Below is a sample output of our implementation executed on some of the SNAP (REFERENCE) graph datasets:
+Below is a sample output of our implementation executed on some of the Stanford Network Analysis Project (SNAP) graph datasets\footnote{SNAP datasets: \url{https://snap.stanford.edu/data/}}:
 
 \footnotesize
 \begin{lstlisting}[mathescape=true]
