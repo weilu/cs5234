@@ -16,6 +16,7 @@
 \usepackage{cite}
 \usepackage{color,soul}
 \usepackage{hyperref}
+\usepackage[toc,page]{appendix}
 
 \title{CS5234 Project Report}
 
@@ -320,6 +321,25 @@ On the implementation and experiment front, we've successfully implemented Goldb
   \item To verify correctness, start with a small dataset on a single worker/node. This makes debugging easier to reason.
   \item Before setting up and experimenting on multiple remote instances, first make sure the program behaves correctly locally with multiple workers. This saves time and money.
 \end{enumerate}
+
+\newpage
+
+\begin{appendices}
+\section{Source Code}
+All source code is available at \url{https://github.com/weilu/cs5234}. Please follow the setup instructions in the README.
+
+\begin{itemize}
+  \item Data folder: \href{https://github.com/weilu/cs5234/tree/master/data}{/data}
+  \item Data preprocessing: \href{https://github.com/weilu/cs5234/blob/master/preprocess.py}{preprocess.py}
+  \item Goldberg's exact algorithm: \href{https://github.com/weilu/cs5234/blob/master/densest_subgraph_goldberg.py}{densest\_subgraph\_goldberg.py}
+  \item Bahmani's approximation algorithm (non-distributed): \href{https://github.com/weilu/cs5234/blob/master/densest_subgraph_approx.py}{densest\_subgraph\_approx.py}
+  \item Bahmani's approximation algorithm Hadoop implementation: \href{https://github.com/weilu/cs5234/tree/master/hadoop}{/hadoop}
+  \item Bahmani's approximation algorithm Giraph implementation: \href{https://github.com/weilu/cs5234/tree/master/giraph/}{/giraph}
+  \item Bahmani's approximation algorithm Hadoop implementation executable on AWS EMR: \href{https://github.com/weilu/cs5234/tree/hadoop2/hadoop2}{folder /hadoop2 on git branch hadoop2}
+\end{itemize}
+\end{appendices}
+
+\newpage
 
 \bibliography{reference}{}
 \bibliographystyle{plain}
