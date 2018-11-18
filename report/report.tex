@@ -254,8 +254,56 @@ The threshold mapper reads the output from the previous MapReduce job and filter
 
 To perform node removal, we need to remove every edges in the graph that are associated to the nodes with degree below threshold during each iteration. It requires two MapReduce passes. For each edge pair $(u,v)$, the mapper first uses $u$ as the mapping key, and it emits an additinal special key-value pair $(u, \$)$ when the mapper reads a node degree below the threshold, otherwise it just copies the input key-value pair. When the reducer later receives input with values containing the special character \$, it omits all the values associated with that key, otherwise, it copies every key-value pair and emit them. In the second pass, the mapper then uses $v$ as the mapping key, and perform the same action; and so does the reducer.
 
-\hl{TODO Xavier: add experiment results on actual improvement from merging degree counting \& node removal step.}
-Our attempted improvement is that, for each iteration instead of running all these two stages as three different MapReduce phases, we have managed to combine the degree counting into the second phase of node removal, which significantly eliminates the overhead of running an extra MapReduce phase.
+Our attempted improvement is that, for each iteration instead of running all these two stages as three different MapReduce phases, we have managed to combine the degree counting into the second phase of node removal, which significantly eliminates the overhead of running an extra MapReduce phase. To measure the performance gained, we ran our Hadoop implementation on local machine using Hadoop Streaming and HFDS. 
+
+Here are our naive Hadoop implementation results:
+\footnotesize
+\begin{lstlisting}[mathescape=true]
+Input Graph Path on HFDS: 
+  ca-AstroPh.txt
+Densest Subgraph Results:
+  Elapsed Time 279.53s
+  # Nodes: 57; # Edges: 3193
+  Density: 56.02; Normalized Density: 28.01
+
+Input Graph Path on HFDS: 
+  ca-CondMat.txt
+Densest Subgraph Results:
+  Elapsed Time 275.22s
+  # Nodes: 26; # Edges: 653
+  Density: 25.12; Normalized Density: 12.56
+
+Input Graph Path on HFDS: 
+  ca-GrQc.txt 
+Densest Subgraph Results:
+  Elapsed Time 222.55s
+  # Nodes: 46; # Edges: 2060
+  Density: 44.78; Normalized Density: 22.39
+
+Input Graph Path on HFDS: 
+  ca-HepPh.txt
+Densest Subgraph Results:
+  Elapsed Time 214.99s
+  # Nodes: 239; # Edges: 56883
+  Density: 238.00; Normalized Density: 119.00
+
+Input Graph Path on HFDS: 
+  ca-HepTh.txt
+Densest Subgraph Results:
+  Elapsed Time 219.37s
+  # Nodes: 32; # Edges: 992
+  Density: 31.0; Normalized Density: 15.5
+
+Input Graph Path on HFDS: 
+  email-Enron.txt
+Densest Subgraph Results:
+  Elapsed Time 287.23s
+  # Nodes: 493; # Edges: 34812
+  Density: 70.61; Normalized Density: 35.31
+\end{lstlisting}
+
+TO-DO: Explain results
+Our experiment results clearly show that, just by reducing a MapReduce phase can result in almost 2x speedup 
 
 \subsection{Giraph Adaptation}
 Giraph is an open source distributed data processing framework specifically designed for processing graphs. It implements the Pregel computational model \cite{Malewicz:2010:PSL:1807167.1807184}, which in turn is inspired by Valiant’s Bulk Synchronous Parallel model \cite{Valiant:1990:BMP:79173.79181}. It models the data processing as a sequence of iterations, each iteration is called a ``superste''. At each superstep, a user defined function is executed, conceptually in parallel for every node of the graph. A vertex can perform update and mutation actions such as changing its label data and removing its neighboring edges, as well as sending messages to its neighboring nodes over outgoing edges and processing any incoming messages from the previous superstep.
