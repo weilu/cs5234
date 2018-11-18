@@ -208,37 +208,45 @@ Below is a sample output of our implementation executed on some of the Stanford 
 
 \footnotesize
 \begin{lstlisting}[mathescape=true]
-TODO: update me
 python densest_subgraph_goldberg.py
-Processing data/ca-HepPh.txt
-original: # of nodes: 12008, # of edges: 118521, density: 9.8702
-subgraph: # of nodes: 239, # of edges: 28442, density: 119.0042
-function [process_graph] finished in 135807 ms
-Processing data/ca-GrQc.txt
-original: # of nodes: 5242, # of edges: 14496, density: 2.7654
-subgraph: # of nodes: 46, # of edges: 1030, density: 22.3913
-function [process_graph] finished in 16932 ms
-Processing data/ca-AstroPh.txt
+Processing data/ca-AstroPh_preprocessed.txt
 original: # of nodes: 18772, # of edges: 198110, density: 10.5535
 subgraph: # of nodes: 565, # of edges: 18147, density: 32.1186
-function [process_graph] finished in 219283 ms
-Processing data/email-Enron.txt
-original: # of nodes: 36692, # of edges: 183831, density: 5.0101
-subgraph: # of nodes: 555, # of edges: 20726, density: 37.3441
-function [process_graph] finished in 1033592 ms
-Processing data/ca-HepTh.txt
-original: # of nodes: 9877, # of edges: 25998, density: 2.6322
-subgraph: # of nodes: 32, # of edges: 496, density: 15.5
-function [process_graph] finished in 70048 ms
-Processing data/ca-CondMat.txt
+function [process_graph] finished in 146275 ms
+
+Processing data/ca-CondMat_preprocessed.txt
 original: # of nodes: 23133, # of edges: 93497, density: 4.0417
 subgraph: # of nodes: 30, # of edges: 404, density: 13.4667
-function [process_graph] finished in 369477 ms
+function [process_graph] finished in 198157 ms
+
+Processing data/ca-GrQc_preprocessed.txt
+original: # of nodes: 5242, # of edges: 14496, density: 2.7654
+subgraph: # of nodes: 46, # of edges: 1030, density: 22.3913
+function [process_graph] finished in 11083 ms
+
+Processing data/email-Enron_preprocessed.txt
+original: # of nodes: 36692, # of edges: 183831, density: 5.0101
+subgraph: # of nodes: 555, # of edges: 20726, density: 37.3441
+function [process_graph] finished in 538753 ms
+
+Processing data/ca-HepPh_preprocessed.txt
+original: # of nodes: 12008, # of edges: 118521, density: 9.8702
+subgraph: # of nodes: 239, # of edges: 28442, density: 119.0042
+function [process_graph] finished in 71956 ms
+
+Processing data/ca-HepTh_preprocessed.txt
+original: # of nodes: 9877, # of edges: 25998, density: 2.6322
+subgraph: # of nodes: 32, # of edges: 496, density: 15.5
+function [process_graph] finished in 33418 ms
 \end{lstlisting}
 
 \normalsize
 
-This exercise also help us better understand Goldberg's exact algorithm, which gave us the idea of formulating the distributed version of the algorithm described above.
+We preprocessed the edge list data from SNAP because we noticed that though the datasets are labelled ``undirected'', it's not always guaranteed that every node pair only appears once, nor the matching reverse pair always exists. Our preprocessing script scans through all the edges and if $(a, b)$ and $(b, a)$ both exist, we only keep one of them in the \texttt{*\_preprocessed.txt} files.
+
+Running the exact algorithm implementation on real-world data provides us with the ground truth of the densest subgraphs. We used results from this exercies to verify that our Hadoop and Giraph implementations of the approximation algorithm produce correct results within the theoretical bounds. In addition, the timing information is also useful as performance baseline to gauge the scale of data a single machine is able to handle, for example, according to the above output, on a MacBook Air with 1.6 GHz Intel Core i5 processor, with 16 GB RAM, it took about 9 minutes to execute the exact algorithm on the Enron email dataset which has 36K+ nodes.
+
+This exercise of implementing Goldberg's exact algorithm also helped us better understand the algorithm, which gave us the idea of formulating the distributed version of the algorithm described above.
 
 \subsection{Hadoop Implementation \& Improvement}
 Hadoop is an open source implementation of the MapReduce programming model proposed by Dean and Ghemawat from Google. The MapReduce model is designed to facilitate general purpose distributed big data processing \cite{Dean:2004:MSD:1251254.1251264}. A MapReduce job is made of two phases: the Map phase reads key-value pairs from a distributed file system and perform operations such as filtering and transformation and emit intermediate key-value pairs as output. The framework then takes care of shuffling the intermediate output and group them by key and send those with the same key to the same reducer for the Reduce phase. The Reduce phase is analogous to the reduce function in functinoal programming. This is where values of the same key can be aggregated or tallied according to the user defined reduce function. The output of the Reduce phase is then written into the distributed file system. Multiple MapReduce jobs can be chained to form a workflow to handle general purpose data processing at scale.
@@ -297,6 +305,7 @@ Another caveat to note is that by default, Giraph will recreate a deleted node w
 In the process of implementing the Giraph adaption of the approximation algorithm, we realized that it's difficult to reason and debug such a distributed program due to unfamiliarity with the framework. One thing that really helped speed up the debugging process is to implement the approximation algorithm in pure python and print out the expected number of nodes, edges and degree threshold at every iteration. Since the algorithm is simple and runs fast, the python implementation is quick to implement and easy to run on a small dataset. By comparing the debug output from the python program and the Giraph program, we are able to track down the sources of the issues and understand quirks and features of the Giraph framework.
 
 \section{Conclusion}
+
 
 \bibliography{reference}{}
 \bibliographystyle{plain}
