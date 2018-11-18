@@ -57,7 +57,7 @@ Where $m$ is the number of edges and $n$ is the number of nodes of graph $G$. Th
 
 A dense subgraph is induced by a set of nodes in the original graph with many edges connecting them. The problem of finding the densest subgraph for undirected graphs is first formalized by Andrew Goldberg in 1984 \cite{Goldberg:CSD-84-171}. He proposed a polynomial time exact algorithm for both unweighted and weighted graphs. It has been an active area research since. This class of problems are interesting not just from a theoretical perspective, they also have a lot of practical applications, such as community detection in social networks, web link spam detection for search engines, and correlation mining for gene, item or time series datasets. Such graph datasets are usually large with millions and even billions of nodes, which makes poly-time algorithm impractical. This prompts research in the direction of both distributed and approximation algorithms.
 
-In our project, we limit the scope of our investigation to unweighted and undirect graphs. First, we explored both exact and approximation algorithms from existing literature for the densest subgraph problem, and formulated a distributed exact algorithm. For experimentation, we implemented Goldberg's exact algorithm, which we used to produce baselines for various datasets we experimented with. We then replicated and improved a MapReduce implementation of an approximation algorithm by Bahman et al in Hadoop – a distributed big data processing framework built on top of the MapReduce computational model. Last but not least, we also adopted the same approximation algorithm to a distributed graph processing framework named Giraph. We will present challenges and key lessons learned and compare the Hadoop and Giraph implementations.
+In our project, we limit the scope of our investigation to unweighted and undirect graphs. First, we explored both exact and approximation algorithms from existing literature for the densest subgraph problem, and formulated a distributed exact algorithm. For experimentation, we implemented Goldberg's exact algorithm, which we used to produce baselines for various datasets we experimented with. We then replicated and improved a MapReduce implementation of an approximation algorithm by Bahmani et al in Hadoop – a distributed big data processing framework built on top of the MapReduce computational model. Last but not least, we also adopted the same approximation algorithm to a distributed graph processing framework named Giraph. We will present challenges and key lessons learned and compare the Hadoop and Giraph implementations.
 
 \section{Algorithms and Theory}
 In this section, we will introduce Goldberg's exact algorithm and briefly cover several approximation algorithms. Lastly, we will present our distributed exact algorithms and two possible realizations.
@@ -271,64 +271,21 @@ The threshold mapper reads the output from the previous MapReduce job and filter
 
 To perform node removal, we need to remove every edges in the graph that are associated to the nodes with degree below threshold during each iteration. It requires two MapReduce passes. For each edge pair $(u,v)$, the mapper first uses $u$ as the mapping key, and it emits an additinal special key-value pair $(u, \$)$ when the mapper reads a node degree below the threshold, otherwise it just copies the input key-value pair. When the reducer later receives input with values containing the special character \$, it omits all the values associated with that key, otherwise, it copies every key-value pair and emit them. In the second pass, the mapper then uses $v$ as the mapping key, and perform the same action; and so does the reducer.
 
-Our attempted improvement is that, for each iteration instead of running all these two stages as three different MapReduce phases, we have managed to combine the degree counting into the second phase of node removal, which eliminates the overhead of running an extra MapReduce phase. To benchmark the performance gained, we ran our Hadoop implementation on local machine using Hadoop Streaming and HFDS on six different large graphs. Our experiment results show that, just by reducing a MapReduce phase can result in at least a 1.8x speedup, which is a significant gain in performance. 
+We improved the original Hadoop implementation proposed in the Bahmani paper by reducing the number of MapReduce phases in the pipeline. We combined the degree counting procedure with the second pass of node removal, which eliminates the overhead of an extra MapReduce step. Our benchmark on six real-world dataset shows significant performance gain\footnote{Benchmark performed on a single machine with 2.8GHz Intel Core i7 processors \& 8GB RAM allocated on VirtualBox}:
 
-\footnotesize
-\begin{lstlisting}[mathescape=true]
-Input Graph Path on HFDS: 
-  ca-AstroPh.txt
-Densest Subgraph Results:
-  (Naive) Elapsed Time: 279.53s
-  (Improved) Elapsed Time: 156.31s
-  Speed-up: 1.80x
-  # Nodes: 57; # Edges: 3193
-  Density: 56.02; Normalized Density: 28.01
----------------------------------------------
-Input Graph Path on HFDS: 
-  ca-CondMat.txt
-Densest Subgraph Results:
-  (Naive) Elapsed Time: 275.22s
-  (Improved) Elapsed Time: 140.96s
-  Speed-up: 1.95x
-  # Nodes: 26; # Edges: 653
-  Density: 25.12; Normalized Density: 12.56
----------------------------------------------
-Input Graph Path on HFDS: 
-  ca-GrQc.txt 
-Densest Subgraph Results:
-  (Naive) Elapsed Time: 222.55s
-  (Improved) Elapsed Time: 108.28s
-  Speed-up: 2.06x
-  # Nodes: 46; # Edges: 2060
-  Density: 44.78; Normalized Density: 22.39
----------------------------------------------
-Input Graph Path on HFDS: 
-  ca-HepPh.txt
-Densest Subgraph Results:
-  (Naive) Elapsed Time: 214.99s
-  (Improved) Elapsed Time: 105.27s
-  Speed-up: 2.04x
-  # Nodes: 239; # Edges: 56883
-  Density: 238.00; Normalized Density: 119.00
----------------------------------------------
-Input Graph Path on HFDS: 
-  ca-HepTh.txt
-Densest Subgraph Results:
-  (Naive) Elapsed Time: 219.37s
-  (Improved) Elapsed Time: 110.30s
-  Speed-up: 1.99x
-  # Nodes: 32; # Edges: 992
-  Density: 31.0; Normalized Density: 15.5
----------------------------------------------
-Input Graph Path on HFDS: 
-  email-Enron.txt
-Densest Subgraph Results:
-  (Naive) Elapsed Time: 287.23s
-  (Improved) Elapsed Time: 147.95s
-  Speed-up: 1.95x
-  # Nodes: 493; # Edges: 34812
-  Density: 70.61; Normalized Density: 35.31
-\end{lstlisting}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\multirow{2}{*}{ Dataset } & \multicolumn{2}{|c|}{ Running Time (seconds) } & \multirow{2}{*}{ Speed-up } \\
+& Original Implementation & Improved Implementation & \\
+\hline
+ca-AstroPh & 279.5 & 156.3 & 1.8x \\
+ca-CondMat & 275.2 & 141.0 & 2.0x \\
+ca-GrQc & 222.6 & 108.3 & 2.1x \\
+ca-HepPh & 215.0 & 105.3 & 2.0x \\
+ca-HepTh & 219.4 & 110.3 & 2.0x \\
+email-Enron & 287.2 & 148.0 & 1.9x \\
+\hline
+\end{tabular}
 
 \subsection{Giraph Adaptation}
 Giraph is an open source distributed data processing framework specifically designed for processing graphs. It implements the Pregel computational model \cite{Malewicz:2010:PSL:1807167.1807184}, which in turn is inspired by Valiant’s Bulk Synchronous Parallel model \cite{Valiant:1990:BMP:79173.79181}. It models the data processing as a sequence of iterations, each iteration is called a ``superste''. At each superstep, a user defined function is executed, conceptually in parallel for every node of the graph. A vertex can perform update and mutation actions such as changing its label data and removing its neighboring edges, as well as sending messages to its neighboring nodes over outgoing edges and processing any incoming messages from the previous superstep.
